@@ -53,9 +53,14 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
   ]);
   const customerNames = new Map(customers.map((customer) => [customer.id, customer.name]));
   const activeLeases = leases.filter(
-    (lease) => !lease.return_requested_on && lease.end_date > date
+    (lease) =>
+      lease.signed_date <= date &&
+      lease.end_date > date &&
+      (!lease.return_requested_on || lease.return_requested_on > date)
   );
-  const returnRequests = leases.filter((lease) => lease.return_requested_on !== null);
+  const returnRequests = leases.filter(
+    (lease) => lease.return_requested_on !== null && lease.return_requested_on <= date
+  );
   const invoiceRows = leases.flatMap((lease) =>
     lease.invoices.map((invoice) => ({ lease, invoice }))
   );
