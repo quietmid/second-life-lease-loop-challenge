@@ -15,21 +15,78 @@ datasource db {
 // One physical item that can be leased, returned, refurbished and leased again.
 // Mirrors data/assets.json; `usage` is stored as two columns.
 model Asset {
-  id             String   @id
+  id             String      @id
   category       String // e_bike | laptop | farm_machine
   make           String
   model          String
   model_year     Int
-  serial_number  String   @unique
+  serial_number  String      @unique
   condition      String // new | like_new | good | fair | poor
   usage_unit     String // km | battery_cycles | engine_hours
   usage_value    Int
   previous_lives Int
   status         String // available | reserved | returned
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+  quotes         DemoQuote[]
+  leases         DemoLease[]
 
   @@index([category])
+}
+
+model DemoQuote {
+  id            String     @id @default(cuid())
+  asset_id      String
+  asset         Asset      @relation(fields: [asset_id], references: [id])
+  customer_id   String
+  quote_date    String
+  locked        Boolean
+  term_months   Int
+  down_cents    Int
+  price_cents   Int
+  price_version Int
+  lease         DemoLease?
+  created_at    DateTime   @default(now())
+
+  @@index([customer_id])
+}
+
+model DemoLease {
+  id                  String        @id @default(cuid())
+  quote_id            String        @unique
+  quote               DemoQuote     @relation(fields: [quote_id], references: [id])
+  asset_id            String
+  asset               Asset         @relation(fields: [asset_id], references: [id])
+  customer_id         String
+  signed_date         String
+  end_date            String
+  term_months         Int
+  list_price_cents    Int
+  down_cents          Int
+  monthly_net_cents   Int
+  buyout_cents        Int
+  price_version       Int
+  return_requested_on String?
+  invoices            DemoInvoice[]
+  created_at          DateTime      @default(now())
+
+  @@index([customer_id])
+}
+
+model DemoInvoice {
+  id                   String    @id @default(cuid())
+  lease_id             String
+  lease                DemoLease @relation(fields: [lease_id], references: [id])
+  issue_date           String
+  due_date             String
+  period_start         String
+  period_end_exclusive String
+  net_cents            Int
+  vat_rate_percent     Float
+  vat_cents            Int
+  total_cents          Int
+
+  @@index([lease_id, issue_date])
 }
 
 // Who changed what, and when. Written in the same transaction as the change

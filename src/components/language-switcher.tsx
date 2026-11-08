@@ -6,7 +6,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { localeNames, locales, type Locale } from '@/i18n/locales';
 
-export function LanguageSwitcher({ current, label }: { current: Locale; label: string }) {
+export function LanguageSwitcher({
+  current,
+  label,
+  query,
+}: {
+  current: Locale;
+  label: string;
+  query?: string;
+}) {
   const pathname = usePathname();
   const rest = pathname.split('/').slice(2).join('/');
 
@@ -18,7 +26,7 @@ export function LanguageSwitcher({ current, label }: { current: Locale; label: s
           return (
             <li key={locale}>
               <Link
-                href={rest ? `/${locale}/${rest}` : `/${locale}`}
+                href={`${rest ? `/${locale}/${rest}` : `/${locale}`}${query ? `?${query}` : ''}`}
                 hrefLang={locale}
                 lang={locale}
                 aria-current={active ? 'page' : undefined}

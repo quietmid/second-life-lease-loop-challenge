@@ -1,5 +1,6 @@
 // One catalogue item. A server component: it renders to HTML and ships no JavaScript.
 import type { Asset, AssetStatus } from '@/data/schemas';
+import Link from 'next/link';
 import { formatEuro } from '@/domain/money';
 import type { ListPriceResult } from '@/domain/price-list';
 import { formatNumber } from '@/i18n/format';
@@ -29,9 +30,10 @@ type AssetCardProps = {
   price: ListPriceResult;
   locale: Locale;
   t: Translate;
+  demoQuery?: string;
 };
 
-export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
+export function AssetCard({ asset, price, locale, t, demoQuery }: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const status = statusStyles[asset.status];
 
@@ -73,6 +75,14 @@ export function AssetCard({ asset, price, locale, t }: AssetCardProps) {
             <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
           ) : null}
         </div>
+        {asset.status === 'available' && price.ok && demoQuery !== undefined ? (
+          <Link
+            href={`/${locale}/quote/${asset.id}${demoQuery ? `?${demoQuery}` : ''}`}
+            className="mt-4 rounded-lg bg-[#1f5948] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#164334]"
+          >
+            {t('journey.start')}
+          </Link>
+        ) : null}
         <p className="text-right text-xl font-semibold tabular-nums">
           {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
         </p>
