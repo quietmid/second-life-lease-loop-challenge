@@ -8,7 +8,7 @@ import { listPriceOn } from '@/domain/price-list';
 import { formatIsoDate } from '@/i18n/format';
 import { getT } from '@/i18n/get-t';
 import { isLocale } from '@/i18n/locales';
-import { listAssets } from '@/server/assets';
+import { toAsset } from '@/server/assets';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
 
@@ -30,9 +30,19 @@ export default async function CataloguePage({
   if (profile) demoQuery.set('profile', profile);
   const parsedDate = isoDateSchema.safeParse(queryDate ?? todayIso());
   const selectedDate = parsedDate.success ? parsedDate.data : todayIso();
-  const [assets, priceLists] = await Promise.all([listAssets(db), loadPriceLists()]);
+  const [assetRows, priceLists] = await Promise.all([
+    db.asset.findMany({ orderBy: { id: 'asc' } }),
+    loadPriceLists(),
+  ]);
+  const assets = assetRows.map((row) => ({
+    asset: toAsset(row),
+    currentNetPriceCents: row.current_net_price_cents,
+  }));
   const groups = assetCategorySchema.options
-    .map((category) => ({ category, assets: assets.filter((a) => a.category === category) }))
+    .map((category) => ({
+      category,
+      assets: assets.filter((item) => item.asset.category === category),
+    }))
     .filter((group) => group.assets.length > 0);
 
   return (
@@ -80,15 +90,18 @@ export default async function CataloguePage({
             </p>
           </div>
           <ul className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {group.assets.map((asset) => (
+            {group.assets.map(({ asset, currentNetPriceCents }) => (
               <li key={asset.id}>
                 <AssetCard
                   asset={asset}
                   price={
-                    parsedDate.success
-                      ? listPriceOn(priceLists, asset.id, selectedDate)
-                      : { ok: false, reason: 'no_price_list_on_date' }
+                    parsedDate.success && currentNetPriceCents !== null
+                      ? { ok: true, priceCents: currentNetPriceCents, priceListVersion: 0 }
+                      : parsedDate.success
+                        ? listPriceOn(priceLists, asset.id, selectedDate)
+                        : { ok: false, reason: 'no_price_list_on_date' }
                   }
+                  currentNetPriceCents={parsedDate.success ? currentNetPriceCents : null}
                   locale={locale}
                   t={t}
                   demoQuery={profile === 'admin' ? undefined : demoQuery.toString()}

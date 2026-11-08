@@ -50,7 +50,14 @@ export async function createDemoQuote(db: PrismaClient, input: QuoteInput) {
   if (!asset || asset.status !== 'available') {
     throw new ApiError(409, 'ASSET_UNAVAILABLE', 'This item is not available.');
   }
-  const price = listPriceOn(priceLists, input.assetId, input.quoteDate);
+  const price =
+    asset.current_net_price_cents === null
+      ? listPriceOn(priceLists, input.assetId, input.quoteDate)
+      : {
+          ok: true as const,
+          priceCents: asset.current_net_price_cents,
+          priceListVersion: 0,
+        };
   if (!price.ok)
     throw new ApiError(400, 'PRICE_UNAVAILABLE', 'No price is available on this date.');
   const factor = monthlyFactorFor(table, price.priceCents - input.downCents, input.termMonths);
@@ -109,7 +116,13 @@ export async function previewDemoQuote(
   const locked = isQuoteLocked(quote.quote_date, signingDate, quote.locked);
   const price = locked
     ? { ok: true as const, priceCents: quote.price_cents, priceListVersion: quote.price_version }
-    : listPriceOn(priceLists, quote.asset_id, signingDate);
+    : quote.asset.current_net_price_cents === null
+      ? listPriceOn(priceLists, quote.asset_id, signingDate)
+      : {
+          ok: true as const,
+          priceCents: quote.asset.current_net_price_cents,
+          priceListVersion: 0,
+        };
   if (!price.ok)
     throw new ApiError(400, 'PRICE_UNAVAILABLE', 'No price is available on this date.');
   const factor = monthlyFactorFor(table, price.priceCents - quote.down_cents, quote.term_months);
@@ -274,6 +287,8 @@ export async function requestDemoReturn(
       const lease = await tx.demoLease.findUnique({ where: { id: leaseId } });
       if (!lease || lease.customer_id !== customerId)
         throw new ApiError(404, 'LEASE_NOT_FOUND', 'Demo lease not found.');
+      if (lease.bought_out_on)
+        throw new ApiError(409, 'LEASE_BOUGHT_OUT', 'This item was bought out at lease end.');
       const eligible = canRequestReturn(lease.end_date, date, lease.return_requested_on !== null);
       if (!eligible.ok)
         throw new ApiError(
@@ -281,7 +296,12 @@ export async function requestDemoReturn(
           'RETURN_UNAVAILABLE',
           'Return cannot be requested yet or has already been requested.'
         );
-      return tx.demoLease.update({ where: { id: leaseId }, data: { return_requested_on: date } });
+      const updated = await tx.demoLease.update({
+        where: { id: leaseId },
+        data: { return_requested_on: date },
+      });
+      await tx.asset.update({ where: { id: lease.asset_id }, data: { status: 'returned' } });
+      return updated;
     }
   );
 }

@@ -3,12 +3,15 @@ node_modules/
 
 # Next.js
 .next/
+.next-playwright/
 out/
 next-env.d.ts
 *.tsbuildinfo
 
 # tests
 coverage/
+test-results/
+playwright-report/
 
 # Prisma: generated client and local SQLite databases
 src/generated/

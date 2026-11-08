@@ -20,6 +20,7 @@ export type AppShellMessages = {
   returnedItems: string;
   invoiceHistory: string;
   assetHistory: string;
+  scenarios: string;
   endDemo: string;
   profileLabel: string;
   customerProfile: string;
@@ -106,6 +107,11 @@ export function AppShell({ children, locale, customers, defaultDate, messages }:
           href: `/${locale}/admin?tab=passports`,
           active: pathname.endsWith('/admin') && adminTab === 'passports',
         },
+        {
+          label: messages.scenarios,
+          href: `/${locale}/scenarios`,
+          active: pathname.endsWith('/scenarios'),
+        },
       ]
     : [
         { label: messages.home, href: `/${locale}`, active: pathname === `/${locale}` },
@@ -118,6 +124,11 @@ export function AppShell({ children, locale, customers, defaultDate, messages }:
           label: messages.account,
           href: `/${locale}/account`,
           active: pathname === `/${locale}/account`,
+        },
+        {
+          label: messages.scenarios,
+          href: `/${locale}/scenarios`,
+          active: pathname.endsWith('/scenarios'),
         },
         {
           label: messages.lease,
@@ -200,20 +211,23 @@ export function AppShell({ children, locale, customers, defaultDate, messages }:
         </form>
       </header>
 
-      <div className="mx-auto grid min-h-[calc(100dvh-174px)] max-w-[1440px] lg:grid-cols-[232px_minmax(0,1fr)]">
-        <aside className="border-b border-[#dce4dc] px-4 py-5 sm:px-7 lg:border-r lg:border-b-0 lg:px-5">
-          <nav aria-label={isAdmin ? messages.adminProfile : messages.customerProfile}>
+      <div className="mx-auto grid min-h-[calc(100dvh-174px)] max-w-[1440px] grid-cols-1 lg:grid-cols-[232px_minmax(0,1fr)]">
+        <aside className="min-w-0 overflow-hidden border-b border-[#dce4dc] px-4 py-5 sm:px-7 lg:border-r lg:border-b-0 lg:px-5 lg:overflow-visible">
+          <nav
+            className="min-w-0"
+            aria-label={isAdmin ? messages.adminProfile : messages.customerProfile}
+          >
             <p className="mb-3 px-3 text-xs font-bold uppercase tracking-[0.16em] text-[#83948a]">
               {isAdmin ? messages.adminProfile : messages.customerProfile}
             </p>
-            <ul className="flex gap-2 overflow-x-auto lg:flex-col">
+            <ul className="flex w-full min-w-0 flex-wrap gap-2 lg:flex-col">
               {navItems.map((item) => (
                 <li key={item.label}>
                   {item.disabled ? (
                     <span
                       aria-disabled="true"
                       title={messages.comingSoon}
-                      className="flex min-h-10 items-center whitespace-nowrap rounded-lg px-3 text-sm text-[#8b9b91]"
+                      className="flex min-h-10 max-w-full items-center rounded-lg px-3 text-sm text-[#8b9b91] lg:whitespace-nowrap"
                     >
                       {item.label}
                       <span className="sr-only"> — {messages.comingSoon}</span>
@@ -222,7 +236,7 @@ export function AppShell({ children, locale, customers, defaultDate, messages }:
                     <Link
                       href={contextualHref(item.href ?? `/${locale}`)}
                       aria-current={item.active ? 'page' : undefined}
-                      className={`flex min-h-10 items-center whitespace-nowrap rounded-lg px-3 text-sm font-semibold transition-colors ${
+                      className={`flex min-h-10 max-w-full items-center rounded-lg px-3 text-sm font-semibold transition-colors lg:whitespace-nowrap ${
                         item.active
                           ? 'bg-[#e4eee2] text-[#174c3b]'
                           : 'text-[#526c61] hover:bg-white hover:text-[#183b32]'

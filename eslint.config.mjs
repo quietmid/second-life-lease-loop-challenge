@@ -9,6 +9,7 @@ import tseslint from 'typescript-eslint';
 export default defineConfig([
   globalIgnores([
     '.next/**',
+    '.next-playwright/**',
     'out/**',
     'coverage/**',
     'src/generated/**',

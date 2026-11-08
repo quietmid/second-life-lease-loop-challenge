@@ -19,6 +19,13 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await db.auditLog.deleteMany();
+  await db.demoRefurbishment.deleteMany();
+  await db.demoReturnInspection.deleteMany();
+  await db.demoEarlyExit.deleteMany();
+  await db.demoAssetReceipt.deleteMany();
+  await db.demoInvoice.deleteMany();
+  await db.demoLease.deleteMany();
+  await db.demoQuote.deleteMany();
   await db.asset.deleteMany();
 });
 
@@ -84,6 +91,7 @@ describe('toAsset', () => {
     const row = {
       ...toAssetRowData(first),
       status: 'stolen',
+      current_net_price_cents: null,
       created_at: new Date(),
       updated_at: new Date(),
     };

@@ -13,6 +13,9 @@ beforeAll(async () => {
 });
 afterAll(async () => cleanup());
 beforeEach(async () => {
+  await db.demoRefurbishment.deleteMany();
+  await db.demoReturnInspection.deleteMany();
+  await db.demoEarlyExit.deleteMany();
   await db.demoInvoice.deleteMany();
   await db.demoLease.deleteMany();
   await db.demoQuote.deleteMany();
@@ -81,7 +84,7 @@ describe('persisted demo lease', () => {
       status: 409,
     });
     expect((await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } })).status).toBe(
-      'reserved'
+      'returned'
     );
     expect(
       (await db.auditLog.findMany({ orderBy: { id: 'asc' } })).map((entry) => entry.action)

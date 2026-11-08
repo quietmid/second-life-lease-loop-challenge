@@ -31,10 +31,14 @@ creates a legally binding signature.
 - Customer and admin navigation is present. The customer can create a demo quote,
   complete an application, simulate an identity check and signing, view invoices,
   confirm an asset's received condition and usage, and request a return.
-- The read-only admin view shows current leases by customer, return requests that
-  are awaiting inspection, invoice breakdowns, audit events, and item passports
-  from the same lease, invoice, and receipt records. Payment, inspection,
-  refurbishment, and next-life decisions are not implemented.
+- The admin view shows current leases by customer, return requests awaiting
+  inspection, invoice breakdowns, audit events, and item passports. Admins can
+  inspect returned items, calculate refurbishment and matching decisions, and
+  make available an unassigned item when wait-list deadlines have passed. A
+  matched waiting-list offer can be accepted as a simulated lease.
+- Customers can preview and confirm a fair early exit or separately choose the
+  end-of-term buyout. Items then follow the inspection workflow.
+- `/[locale]/scenarios` provides direct entry points for all ten challenge cards.
 - Identity checks, signing, and invoices are simulations; no real authentication,
   legal signature, or payment flow is implemented.
 - Business rules belong in `src/domain/` as pure functions with nearby tests;
@@ -101,7 +105,7 @@ the important calculated values can be explained from the UI.
 - Let customers request returns at or after the lease end date. Do not mark an
   item inspected, refurbished, or available for re-lease at this point.
 
-### 2a. Design the Prisma data model for the full lifecycle
+### 2a. Design the Prisma data model for the full lifecycle — implemented
 
 The current SQLite schema already stores assets, demo quotes, leases, invoices,
 return requests, and audit events. Customers still come from the synthetic data
@@ -127,11 +131,17 @@ Before building the admin and next-life flows:
   and test relationships, constraints, state transitions, and migration from
   existing demo records. Do not hand-write migration SQL.
 
-**Done when:** the proposed model supports a customer lease through return,
-admin inspection, and the next lease, and its migration and audit behavior are
-verified without losing existing demo records.
+The implemented model and lifecycle decisions are documented in
+[`docs/SHOWCASE-LIFECYCLE.md`](docs/SHOWCASE-LIFECYCLE.md). Synthetic customers
+remain data-pack IDs rather than database/authentication records. Migrations add
+early-exit, inspection, and refurbishment snapshots while preserving existing
+quote/lease/invoice history.
 
-### 3. Add a visible, honest security moment
+**Done when:** the model supports a customer lease through return, admin
+inspection, and a subsequent lease; lifecycle decisions and migration behavior
+are documented and covered by service tests.
+
+### 3. Add a visible, honest security moment — implemented
 
 At the points where identity confirmation or signing would matter, show a
 focused dialog explaining the simulated step. The demo can offer fictional
@@ -150,7 +160,7 @@ the check or signature was simulated.
 **Done when:** a presenter can show the purpose of verification, a confirmation
 step, and an audit event without the UI overstating what actually happened.
 
-### 4. Add admin visibility from the same records
+### 4. Add admin visibility from the same records — implemented
 
 Once lease and invoice records exist, build admin views for:
 
@@ -170,19 +180,42 @@ the server.
 the same data the customer sees, and a returned item can be followed into its
 next life.
 
-### 5. Finish with second-life storytelling and demo polish
+### 5. Finish with second-life storytelling and demo polish — implemented
 
 - Implement the chosen challenge problems deeply rather than presenting many
   shallow, non-functional controls.
 - Show why an item is refurbished, why a waiting-list customer is selected, and
   how the next-life price is calculated.
+- Explain tie-breaking, condition/deadline exclusions, rent, refurbishment
+  steps/cost, and wear-adjusted CO₂. A matched offer can continue through
+  simulated acceptance, signing, and invoice generation.
 - Consider the asset passport and circular impact as a memorable demo moment.
+- Replay each challenge card from the scenario gallery and verify its user
+  journey with browser-level Playwright tests under `e2e/`.
 - Add clear empty, loading, error, and unavailable states.
 - Check keyboard access, focus visibility, responsive layouts, and all four
   supported languages.
 
+The scenario gallery links directly to each scenario's relevant customer or
+admin screen. The Playwright suite exercises all ten cards, including lease
+creation, price lock, VAT and calendar invoices, decline and review outcomes,
+early exit, wait-list matching, third-life leasing, and the passport. It also
+checks mobile width, keyboard entry, all four locales, and invalid dates. Run it
+with `npm run test:e2e`; it uses a separate copied test database.
+
+The wait-list data pack includes need and eligibility details but no customer
+profiles or contact information. A matched offer can be accepted as a
+simulated lease and generate invoices, but a dedicated account/profile for
+wait-list customers such as `wait-02` would require adding synthetic profile
+records first. This is an optional follow-up, not required to demonstrate the
+current challenge card.
+
 **Done when:** the main demo can be presented smoothly, has no dead-end controls
-masquerading as finished features, and its key decisions are explainable.
+masquerading as finished features, and its key decisions are explainable. The
+ten challenge cards have browser-level coverage. `npm run check:all` passes all
+checks except its default Turbopack build in restricted environments where the
+CSS worker cannot bind a local socket; `PLAYWRIGHT=1 npm run build -- --webpack`
+completes the production build successfully.
 
 ## Engineering checkpoints for every phase
 

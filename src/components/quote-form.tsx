@@ -17,6 +17,9 @@ type Props = {
   priceCents: number;
   table: CoefficientTable;
   messages: Messages;
+  initialTermMonths?: 12 | 24 | 36 | 48;
+  initialDownCents?: number;
+  initialLocked?: boolean;
 };
 
 export function QuoteForm({
@@ -26,12 +29,15 @@ export function QuoteForm({
   locale,
   priceCents,
   table,
+  initialTermMonths = 12,
+  initialDownCents = 0,
+  initialLocked = false,
   messages: t,
 }: Props) {
   const router = useRouter();
-  const [term, setTerm] = useState(12);
-  const [down, setDown] = useState(0);
-  const [locked, setLocked] = useState(false);
+  const [term, setTerm] = useState<number>(initialTermMonths);
+  const [down, setDown] = useState(initialDownCents);
+  const [locked, setLocked] = useState(initialLocked);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const financed = priceCents - down;

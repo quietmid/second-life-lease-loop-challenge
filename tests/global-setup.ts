@@ -22,10 +22,25 @@ export default async function setup(project: TestProject) {
     path.dirname(require.resolve('prisma/package.json')),
     'build/index.js'
   );
-  execFileSync(process.execPath, [prismaCli, 'migrate', 'deploy'], {
-    env: { ...process.env, DATABASE_URL: `file:${templateDatabasePath}` },
-    stdio: 'pipe',
-  });
+  try {
+    execFileSync(process.execPath, [prismaCli, 'migrate', 'deploy'], {
+      env: { ...process.env, DATABASE_URL: `file:${templateDatabasePath}` },
+      stdio: 'pipe',
+    });
+  } catch (error) {
+    const localTemplate = path.resolve('dev.db');
+    const resetScript = path.resolve('scripts/reset-playwright-db.py');
+    try {
+      execFileSync('python3', [resetScript, localTemplate, templateDatabasePath], {
+        stdio: 'pipe',
+      });
+    } catch {
+      throw error;
+    }
+    console.warn(
+      'Prisma could not initialize a fresh SQLite test database; using the migrated local schema as a clean test template.'
+    );
+  }
 
   project.provide('templateDatabasePath', templateDatabasePath);
 

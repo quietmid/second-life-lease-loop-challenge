@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ReturnButton } from '@/components/return-button';
+import { LeaseEndActions } from '@/components/lease-end-actions';
 import { loadCustomers } from '@/data/load';
 import { isoDateSchema } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
-import { getT } from '@/i18n/get-t';
+import { getT, messages } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
@@ -24,7 +25,7 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
     );
   const leases = await db.demoLease.findMany({
     where: { customer_id: customerId },
-    include: { asset: true, invoices: { orderBy: { issue_date: 'asc' } } },
+    include: { asset: true, early_exit: true, invoices: { orderBy: { issue_date: 'asc' } } },
     orderBy: { created_at: 'desc' },
   });
   const format = (cents: number) => formatEuro(cents, intlLocale[locale]);
@@ -92,17 +93,48 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
             </table>
           </div>
           <div className="mt-6">
-            {lease.return_requested_on ? (
-              <p>
-                {t('journey.returnPending')} {lease.return_requested_on}
-              </p>
+            {lease.bought_out_on ? (
+              <p role="status">{t('leaseEnd.boughtOutOn', { date: lease.bought_out_on })}</p>
+            ) : lease.return_requested_on ? (
+              lease.early_exit ? (
+                <p role="status">
+                  {t('leaseEnd.earlyExitComplete')} · {format(lease.early_exit.settlement_cents)}
+                </p>
+              ) : (
+                <p>
+                  {t('journey.returnPending')} {lease.return_requested_on}
+                </p>
+              )
             ) : date >= lease.end_date ? (
-              <ReturnButton
+              <>
+                <ReturnButton
+                  leaseId={lease.id}
+                  customerId={customerId}
+                  date={date}
+                  label={t('journey.return')}
+                  errorMessage={t('journey.error')}
+                />
+                <LeaseEndActions
+                  leaseId={lease.id}
+                  customerId={customerId}
+                  date={date}
+                  signedDate={lease.signed_date}
+                  endDate={lease.end_date}
+                  buyoutCents={lease.buyout_cents}
+                  locale={locale}
+                  messages={messages[locale]}
+                />
+              </>
+            ) : date > lease.signed_date ? (
+              <LeaseEndActions
                 leaseId={lease.id}
                 customerId={customerId}
                 date={date}
-                label={t('journey.return')}
-                errorMessage={t('journey.error')}
+                signedDate={lease.signed_date}
+                endDate={lease.end_date}
+                buyoutCents={lease.buyout_cents}
+                locale={locale}
+                messages={messages[locale]}
               />
             ) : (
               <p>

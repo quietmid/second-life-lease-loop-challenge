@@ -23,6 +23,10 @@ const statusStyles: Record<AssetStatus, { badge: string; dot: string }> = {
       'bg-sky-50 text-sky-900 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800',
     dot: 'bg-sky-600 dark:bg-sky-400',
   },
+  sold: {
+    badge: 'bg-stone-100 text-stone-800 ring-stone-300',
+    dot: 'bg-stone-500',
+  },
 };
 
 type AssetCardProps = {
@@ -31,11 +35,23 @@ type AssetCardProps = {
   locale: Locale;
   t: Translate;
   demoQuery?: string;
+  currentNetPriceCents?: number | null;
 };
 
-export function AssetCard({ asset, price, locale, t, demoQuery }: AssetCardProps) {
+export function AssetCard({
+  asset,
+  price,
+  locale,
+  t,
+  demoQuery,
+  currentNetPriceCents = null,
+}: AssetCardProps) {
   const headingId = `asset-${asset.id}`;
   const status = statusStyles[asset.status];
+  const displayedPrice =
+    currentNetPriceCents === null
+      ? price
+      : { ok: true as const, priceCents: currentNetPriceCents, priceListVersion: 0 };
 
   return (
     <article
@@ -70,12 +86,12 @@ export function AssetCard({ asset, price, locale, t, demoQuery }: AssetCardProps
 
       <div className="mt-auto flex items-end justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800">
         <div className="text-xs text-stone-600 dark:text-stone-400">
-          <p>{t('asset.listPrice')}</p>
-          {price.ok ? (
-            <p>{t('asset.priceListVersion', { version: price.priceListVersion })}</p>
+          <p>{currentNetPriceCents === null ? t('asset.listPrice') : t('asset.secondLifePrice')}</p>
+          {displayedPrice.ok && currentNetPriceCents === null ? (
+            <p>{t('asset.priceListVersion', { version: displayedPrice.priceListVersion })}</p>
           ) : null}
         </div>
-        {asset.status === 'available' && price.ok && demoQuery !== undefined ? (
+        {asset.status === 'available' && displayedPrice.ok && demoQuery !== undefined ? (
           <Link
             href={`/${locale}/quote/${asset.id}${demoQuery ? `?${demoQuery}` : ''}`}
             className="mt-4 rounded-lg bg-[#1f5948] px-4 py-2 text-center text-sm font-semibold text-white hover:bg-[#164334]"
@@ -84,7 +100,9 @@ export function AssetCard({ asset, price, locale, t, demoQuery }: AssetCardProps
           </Link>
         ) : null}
         <p className="text-right text-xl font-semibold tabular-nums">
-          {price.ok ? formatEuro(price.priceCents, intlLocale[locale]) : t('asset.noPrice')}
+          {displayedPrice.ok
+            ? formatEuro(displayedPrice.priceCents, intlLocale[locale])
+            : t('asset.noPrice')}
         </p>
       </div>
     </article>

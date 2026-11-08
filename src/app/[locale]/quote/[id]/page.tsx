@@ -17,6 +17,11 @@ export default async function QuotePage({
   const t = getT(locale);
   const profile = typeof query.profile === 'string' ? query.profile : 'cust-aino';
   const date = typeof query.date === 'string' ? query.date : todayIso();
+  const initialTerm = typeof query.term === 'string' ? Number(query.term) : 12;
+  const initialDown = typeof query.down === 'string' ? Number(query.down) : 0;
+  const initialTermMonths = [12, 24, 36, 48].includes(initialTerm)
+    ? (initialTerm as 12 | 24 | 36 | 48)
+    : 12;
   const [asset, customers, priceLists, table] = await Promise.all([
     db.asset.findUnique({ where: { id } }),
     loadCustomers(),
@@ -26,7 +31,11 @@ export default async function QuotePage({
   if (!asset) notFound();
   const customer = customers.find((entry) => entry.id === profile);
   const validDate = isoDateSchema.safeParse(date);
-  const price = validDate.success ? listPriceOn(priceLists, id, date) : null;
+  const price = validDate.success
+    ? asset.current_net_price_cents !== null
+      ? { ok: true as const, priceCents: asset.current_net_price_cents, priceListVersion: 0 }
+      : listPriceOn(priceLists, id, date)
+    : null;
   return (
     <div className="px-4 py-10 sm:px-8">
       <h1 className="text-4xl font-semibold">{t('journey.quoteTitle')}</h1>
@@ -46,6 +55,12 @@ export default async function QuotePage({
           locale={locale}
           priceCents={price.priceCents}
           table={table}
+          initialTermMonths={initialTermMonths}
+          initialDownCents={
+            Number.isSafeInteger(initialDown) && initialDown >= 0 && initialDown <= price.priceCents
+              ? initialDown
+              : 0
+          }
           messages={messages[locale]}
         />
       )}

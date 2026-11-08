@@ -1,10 +1,17 @@
 import { notFound } from 'next/navigation';
-import { loadCustomers } from '@/data/load';
-import { assetConditionSchema, isoDateSchema, usageUnitSchema } from '@/data/schemas';
+import { loadCo2Factors, loadCustomers, loadResidualCurves } from '@/data/load';
+import {
+  assetCategorySchema,
+  assetConditionSchema,
+  isoDateSchema,
+  usageUnitSchema,
+} from '@/data/schemas';
 import { formatNumber } from '@/i18n/format';
-import { getT } from '@/i18n/get-t';
+import { getT, messages } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { formatEuro } from '@/domain/money';
+import { avoidedCo2Kg } from '@/domain/second-life';
+import { ReturnWorkflow } from '@/components/return-workflow';
 import { listAuditLog } from '@/server/audit';
 import { db } from '@/server/db';
 import { todayIso } from '@/server/today';
@@ -38,19 +45,47 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
     );
   }
 
-  const [customers, leases, assets, audit] = await Promise.all([
-    loadCustomers(),
-    db.demoLease.findMany({
-      include: { asset: true, receipt: true, invoices: { orderBy: { issue_date: 'asc' } } },
-      orderBy: [{ asset_id: 'asc' }, { signed_date: 'asc' }],
-    }),
-    db.asset.findMany({
-      where: { OR: [{ previous_lives: { gt: 0 } }, { leases: { some: {} } }] },
-      include: { leases: { include: { receipt: true }, orderBy: { signed_date: 'asc' } } },
-      orderBy: { id: 'asc' },
-    }),
-    listAuditLog(db, 30),
-  ]);
+  const [customers, leases, assets, returningItems, audit, co2Factors, residualCurves] =
+    await Promise.all([
+      loadCustomers(),
+      db.demoLease.findMany({
+        include: { asset: true, receipt: true, invoices: { orderBy: { issue_date: 'asc' } } },
+        orderBy: [{ asset_id: 'asc' }, { signed_date: 'asc' }],
+      }),
+      db.asset.findMany({
+        where: { OR: [{ previous_lives: { gt: 0 } }, { leases: { some: {} } }] },
+        include: {
+          leases: { include: { receipt: true }, orderBy: { signed_date: 'asc' } },
+          inspections: {
+            include: { refurbishment: true },
+            orderBy: [{ inspected_on: 'desc' }, { created_at: 'desc' }],
+          },
+        },
+        orderBy: { id: 'asc' },
+      }),
+      db.asset.findMany({
+        where: {
+          OR: [
+            { status: 'returned' },
+            { leases: { some: { return_requested_on: { not: null }, bought_out_on: null } } },
+          ],
+        },
+        include: {
+          leases: {
+            where: { return_requested_on: { not: null }, bought_out_on: null },
+            orderBy: [{ return_requested_on: 'desc' }, { signed_date: 'desc' }],
+          },
+          inspections: {
+            include: { refurbishment: true },
+            orderBy: [{ inspected_on: 'desc' }, { created_at: 'desc' }],
+          },
+        },
+        orderBy: { id: 'asc' },
+      }),
+      listAuditLog(db, 30),
+      loadCo2Factors(),
+      loadResidualCurves(),
+    ]);
   const customerNames = new Map(customers.map((customer) => [customer.id, customer.name]));
   const activeLeases = leases.filter(
     (lease) =>
@@ -58,13 +93,27 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
       lease.end_date > date &&
       (!lease.return_requested_on || lease.return_requested_on > date)
   );
-  const returnRequests = leases.filter(
-    (lease) => lease.return_requested_on !== null && lease.return_requested_on <= date
+  const returnRequests = returningItems.filter((asset) =>
+    asset.leases.some((lease) => lease.return_requested_on && lease.return_requested_on <= date)
   );
   const invoiceRows = leases.flatMap((lease) =>
     lease.invoices.map((invoice) => ({ lease, invoice }))
   );
   const format = (cents: number) => formatEuro(cents, intlLocale[locale]);
+  const fleetCo2SavedKg = assets.reduce(
+    (sum, asset) =>
+      sum +
+      avoidedCo2Kg({
+        category: assetCategorySchema.parse(asset.category),
+        condition: assetConditionSchema.parse(asset.condition),
+        usageUnit: usageUnitSchema.parse(asset.usage_unit),
+        usageValue: asset.usage_value,
+        reuseLives: asset.previous_lives,
+        curves: residualCurves,
+        factors: co2Factors,
+      }),
+    0
+  );
 
   return (
     <div className="px-4 py-10 sm:px-8">
@@ -123,40 +172,81 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
           <h2 id="admin-returns-title" className="text-2xl font-semibold">
             {t('admin.returnedItems')}
           </h2>
-          {returnRequests.length === 0 ? (
+          {returnRequests.length +
+            returningItems.filter((asset) => asset.leases.length === 0).length ===
+          0 ? (
             <p className="mt-4 rounded-xl border border-dashed border-[#cbd8cc] p-6 text-[#526c61]">
               {t('admin.noReturns')}
             </p>
           ) : (
             <ul className="mt-5 grid gap-4">
-              {returnRequests.map((lease) => (
-                <li key={lease.id} className="rounded-2xl border border-[#dce4dc] bg-white p-6">
-                  <h3 className="text-xl font-semibold">
-                    {lease.asset.make} {lease.asset.model}
-                  </h3>
-                  <p className="mt-1 text-sm text-[#526c61]">
-                    {t('admin.customer')}:{' '}
-                    {customerNames.get(lease.customer_id) ?? lease.customer_id}
-                  </p>
-                  <p className="mt-1 text-sm text-[#526c61]">
-                    {t('admin.requestedOn')}: {lease.return_requested_on}
-                  </p>
-                  <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <DataField
-                      label={t('admin.returnState')}
-                      value={t('admin.awaitingInspection')}
+              {returningItems.map((asset) => {
+                const returnLease = asset.leases[0];
+                const inspection = asset.inspections[0];
+                const shouldShow =
+                  !returnLease ||
+                  (returnLease.return_requested_on !== null &&
+                    returnLease.return_requested_on <= date);
+                if (!shouldShow) return null;
+                return (
+                  <li
+                    id={`return-${asset.id}`}
+                    key={asset.id}
+                    className="rounded-2xl border border-[#dce4dc] bg-white p-6"
+                  >
+                    <h3 className="text-xl font-semibold">
+                      {asset.make} {asset.model} · {asset.id}
+                    </h3>
+                    {returnLease ? (
+                      <p className="mt-1 text-sm text-[#526c61]">
+                        {t('admin.customer')}:{' '}
+                        {customerNames.get(returnLease.customer_id) ?? returnLease.customer_id}
+                        {' · '}
+                        {t('admin.requestedOn')}: {returnLease.return_requested_on}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-sm text-[#526c61]">{t('admin.legacyReturn')}</p>
+                    )}
+                    {inspection ? (
+                      <p className="mt-2 text-sm text-[#526c61]">
+                        {t('admin.inspectedOn')}: {inspection.inspected_on} · {t('condition.label')}
+                        : {t(`condition.${assetConditionSchema.parse(inspection.condition)}`)}
+                      </p>
+                    ) : null}
+                    <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <DataField
+                        label={t('admin.returnState')}
+                        value={inspection ? t('admin.inspected') : t('admin.awaitingInspection')}
+                      />
+                      <DataField
+                        label={t('admin.refurbishmentStatus')}
+                        value={
+                          inspection?.refurbishment
+                            ? t('admin.refurbishmentComplete')
+                            : t('admin.notAssessed')
+                        }
+                      />
+                      <DataField
+                        label={t('admin.nextLifeStatus')}
+                        value={t('admin.pendingAvailability')}
+                      />
+                    </dl>
+                    <ReturnWorkflow
+                      assetId={asset.id}
+                      leaseId={returnLease?.id}
+                      date={date}
+                      condition={
+                        inspection?.condition
+                          ? assetConditionSchema.parse(inspection.condition)
+                          : assetConditionSchema.parse(asset.condition)
+                      }
+                      usageValue={inspection?.usage_value ?? asset.usage_value}
+                      locale={locale}
+                      messages={messages[locale]}
                     />
-                    <DataField
-                      label={t('admin.refurbishmentStatus')}
-                      value={t('admin.notAssessed')}
-                    />
-                    <DataField
-                      label={t('admin.nextLifeStatus')}
-                      value={t('admin.pendingAvailability')}
-                    />
-                  </dl>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
@@ -217,6 +307,10 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
           <h2 id="admin-passports-title" className="text-2xl font-semibold">
             {t('admin.passports')}
           </h2>
+          <p className="mt-2 max-w-3xl text-sm text-[#526c61]">{t('admin.co2Method')}</p>
+          <p className="mt-4 rounded-xl bg-[#e6f0e2] p-4 font-semibold">
+            {t('admin.fleetCo2Saved')}: {fleetCo2SavedKg.toLocaleString(intlLocale[locale])} kg CO₂e
+          </p>
           {assets.length === 0 ? (
             <p className="mt-4 rounded-xl border border-dashed border-[#cbd8cc] p-6 text-[#526c61]">
               {t('admin.noPassports')}
@@ -224,12 +318,19 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
           ) : (
             <ul className="mt-5 grid gap-4">
               {assets.map((asset) => (
-                <li key={asset.id} className="rounded-2xl border border-[#dce4dc] bg-white p-6">
+                <li
+                  id={`passport-${asset.id}`}
+                  key={asset.id}
+                  className="rounded-2xl border border-[#dce4dc] bg-white p-6"
+                >
                   <h3 className="text-xl font-semibold">
                     {asset.make} {asset.model}
                   </h3>
                   <p className="mt-1 text-sm text-[#526c61]">
                     {asset.serial_number} · {t('admin.recordedLeases')}: {asset.leases.length}
+                  </p>
+                  <p className="mt-1 text-sm text-[#526c61]">
+                    {t('admin.currentLife')}: {asset.previous_lives + 1}
                   </p>
                   <dl className="mt-4 grid gap-3 sm:grid-cols-2">
                     <DataField
@@ -246,7 +347,28 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
                       label={t('admin.earlierLives')}
                       value={String(asset.previous_lives)}
                     />
+                    <DataField
+                      label={t('admin.itemCo2Saved')}
+                      value={`${avoidedCo2Kg({
+                        category: assetCategorySchema.parse(asset.category),
+                        condition: assetConditionSchema.parse(asset.condition),
+                        usageUnit: usageUnitSchema.parse(asset.usage_unit),
+                        usageValue: asset.usage_value,
+                        reuseLives: asset.previous_lives,
+                        curves: residualCurves,
+                        factors: co2Factors,
+                      }).toLocaleString(intlLocale[locale])} kg CO₂e`}
+                    />
+                    {asset.current_net_price_cents !== null ? (
+                      <DataField
+                        label={t('admin.secondLifePrice')}
+                        value={format(asset.current_net_price_cents)}
+                      />
+                    ) : null}
                   </dl>
+                  {asset.previous_lives > 0 ? (
+                    <p className="mt-3 text-xs text-[#718278]">{t('admin.legacyHistoryNote')}</p>
+                  ) : null}
                   {asset.leases.length > 0 ? (
                     <div className="mt-5">
                       <h4 className="font-semibold">{t('admin.history')}</h4>
@@ -262,6 +384,27 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
                                 ? `${t('admin.receiptCondition')}: ${t(`condition.${assetConditionSchema.parse(lease.receipt.condition)}`)} · ${t('admin.receiptUsage')}: ${t(`usage.${usageUnitSchema.parse(lease.receipt.usage_unit)}`, { value: formatNumber(lease.receipt.usage_value, locale) })}`
                                 : t('admin.notReceived')}
                             </p>
+                            {asset.inspections
+                              .filter((inspection) => inspection.lease_id === lease.id)
+                              .map((inspection) => (
+                                <div key={inspection.id} className="mt-2 text-[#526c61]">
+                                  <p>
+                                    {t('admin.inspectedOn')}: {inspection.inspected_on} ·{' '}
+                                    {t('condition.label')}:{' '}
+                                    {t(
+                                      `condition.${assetConditionSchema.parse(inspection.condition)}`
+                                    )}
+                                  </p>
+                                  {inspection.refurbishment ? (
+                                    <p>
+                                      {t('admin.refurbishmentCost')}:{' '}
+                                      {format(inspection.refurbishment.cost_cents)} ·{' '}
+                                      {t('admin.matchWinner')}:{' '}
+                                      {inspection.refurbishment.waitlist_id}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ))}
                           </li>
                         ))}
                       </ol>

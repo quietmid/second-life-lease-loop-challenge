@@ -13,6 +13,9 @@ beforeAll(async () => {
 });
 afterAll(async () => cleanup());
 beforeEach(async () => {
+  await db.demoRefurbishment.deleteMany();
+  await db.demoReturnInspection.deleteMany();
+  await db.demoEarlyExit.deleteMany();
   await db.demoAssetReceipt.deleteMany();
   await db.demoInvoice.deleteMany();
   await db.demoLease.deleteMany();
