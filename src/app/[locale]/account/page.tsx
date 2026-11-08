@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AssetReceiptForm } from '@/components/asset-receipt-form';
+import { LeaseEndActions } from '@/components/lease-end-actions';
+import { ReturnButton } from '@/components/return-button';
 import { loadCustomers } from '@/data/load';
 import { assetConditionSchema, isoDateSchema, usageUnitSchema } from '@/data/schemas';
 import { formatNumber } from '@/i18n/format';
@@ -31,7 +33,7 @@ export default async function AccountPage({
 
   const leases = await db.demoLease.findMany({
     where: { customer_id: customerId },
-    include: { asset: true, receipt: true },
+    include: { asset: true, receipt: true, early_exit: true },
     orderBy: { created_at: 'desc' },
   });
   const customerType =
@@ -97,9 +99,10 @@ export default async function AccountPage({
           <ul className="mt-5 grid gap-5">
             {leases.map((lease) => {
               const condition = assetConditionSchema.parse(
-                lease.receipt?.condition ?? lease.asset.condition
+                lease.return_condition ?? lease.receipt?.condition ?? lease.asset.condition
               );
-              const usageValue = lease.receipt?.usage_value ?? lease.asset.usage_value;
+              const usageValue =
+                lease.return_usage_value ?? lease.receipt?.usage_value ?? lease.asset.usage_value;
               const usageUnit = usageUnitSchema.parse(
                 lease.receipt?.usage_unit ?? lease.asset.usage_unit
               );
@@ -152,6 +155,57 @@ export default async function AccountPage({
                       messages={messages[locale]}
                     />
                   )}
+                  {lease.bought_out_on || lease.return_requested_on ? (
+                    <p role="status" className="mt-4 rounded-lg bg-[#e6f0e2] p-3 text-sm">
+                      {lease.early_exit
+                        ? `${t('leaseEnd.earlyExitComplete')} · ${lease.return_requested_on}`
+                        : lease.bought_out_on
+                          ? t('leaseEnd.boughtOutOn', { date: lease.bought_out_on })
+                          : `${t('journey.returnPending')} ${lease.return_requested_on}`}
+                    </p>
+                  ) : date > lease.signed_date && date < lease.end_date ? (
+                    <LeaseEndActions
+                      leaseId={lease.id}
+                      customerId={customerId}
+                      date={date}
+                      signedDate={lease.signed_date}
+                      endDate={lease.end_date}
+                      condition={condition}
+                      usageValue={usageValue}
+                      usageUnit={usageUnit}
+                      buyoutCents={lease.buyout_cents}
+                      locale={locale}
+                      messages={messages[locale]}
+                    />
+                  ) : date >= lease.end_date ? (
+                    <div className="mt-4">
+                      <ReturnButton
+                        leaseId={lease.id}
+                        customerId={customerId}
+                        date={date}
+                        condition={condition}
+                        usageValue={usageValue}
+                        usageUnit={usageUnit}
+                        locale={locale}
+                        messages={messages[locale]}
+                        label={t('journey.return')}
+                        errorMessage={t('journey.error')}
+                      />
+                      <LeaseEndActions
+                        leaseId={lease.id}
+                        customerId={customerId}
+                        date={date}
+                        signedDate={lease.signed_date}
+                        endDate={lease.end_date}
+                        condition={condition}
+                        usageValue={usageValue}
+                        usageUnit={usageUnit}
+                        buyoutCents={lease.buyout_cents}
+                        locale={locale}
+                        messages={messages[locale]}
+                      />
+                    </div>
+                  ) : null}
                   <Link
                     className="mt-5 inline-flex text-sm font-semibold text-[#1f5948] underline underline-offset-4"
                     href={`/${locale}/leases?${new URLSearchParams({ profile: customerId, date })}`}

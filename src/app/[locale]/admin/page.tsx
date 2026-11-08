@@ -11,6 +11,7 @@ import { getT, messages } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { formatEuro } from '@/domain/money';
 import { avoidedCo2Kg } from '@/domain/second-life';
+import { invoiceDisplayStatus } from '@/domain/invoice-status';
 import { ReturnWorkflow } from '@/components/return-workflow';
 import { listAuditLog } from '@/server/audit';
 import { db } from '@/server/db';
@@ -207,6 +208,15 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
                     ) : (
                       <p className="mt-1 text-sm text-[#526c61]">{t('admin.legacyReturn')}</p>
                     )}
+                    {returnLease?.return_condition ? (
+                      <p className="mt-2 text-sm text-[#526c61]">
+                        {t('leaseEnd.customerReportedReturn')}:{' '}
+                        {t(`condition.${assetConditionSchema.parse(returnLease.return_condition)}`)}
+                        {returnLease.return_usage_value !== null
+                          ? ` · ${t(`usage.${usageUnitSchema.parse(asset.usage_unit)}`, { value: formatNumber(returnLease.return_usage_value, locale) })}`
+                          : ''}
+                      </p>
+                    ) : null}
                     {inspection ? (
                       <p className="mt-2 text-sm text-[#526c61]">
                         {t('admin.inspectedOn')}: {inspection.inspected_on} · {t('condition.label')}
@@ -238,9 +248,15 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
                       condition={
                         inspection?.condition
                           ? assetConditionSchema.parse(inspection.condition)
-                          : assetConditionSchema.parse(asset.condition)
+                          : assetConditionSchema.parse(
+                              returnLease?.return_condition ?? asset.condition
+                            )
                       }
-                      usageValue={inspection?.usage_value ?? asset.usage_value}
+                      usageValue={
+                        inspection?.usage_value ??
+                        returnLease?.return_usage_value ??
+                        asset.usage_value
+                      }
                       locale={locale}
                       messages={messages[locale]}
                     />
@@ -274,6 +290,8 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
                     <th className="p-2">{t('journey.vat')}</th>
                     <th className="p-2">{t('journey.total')}</th>
                     <th className="p-2">{t('admin.invoiceStatus')}</th>
+                    <th className="p-2">{t('payment.methodLabel')}</th>
+                    <th className="p-2">{t('payment.paidOn')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -292,7 +310,31 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
                         {invoice.vat_rate_percent}% · {format(invoice.vat_cents)}
                       </td>
                       <td className="p-2">{format(invoice.total_cents)}</td>
-                      <td className="p-2">{t('admin.paymentNotTracked')}</td>
+                      <td className="p-2">
+                        {t(
+                          `payment.status.${invoiceDisplayStatus({
+                            issueDate: invoice.issue_date,
+                            dueDate: invoice.due_date,
+                            asOfDate: date,
+                            paymentStatus: invoice.payment_status as 'unpaid' | 'paid',
+                            paidOn: invoice.paid_on,
+                          })}`
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {invoice.paid_on && invoice.paid_on > date
+                          ? '—'
+                          : invoice.payment_method === 'bank_transfer'
+                            ? t('payment.method.bank_transfer')
+                            : invoice.payment_method === 'mobilepay'
+                              ? t('payment.method.mobilepay')
+                              : invoice.payment_method === 'card'
+                                ? t('payment.method.card')
+                                : '—'}
+                      </td>
+                      <td className="p-2">
+                        {invoice.paid_on && invoice.paid_on <= date ? invoice.paid_on : '—'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -384,6 +426,17 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
                                 ? `${t('admin.receiptCondition')}: ${t(`condition.${assetConditionSchema.parse(lease.receipt.condition)}`)} · ${t('admin.receiptUsage')}: ${t(`usage.${usageUnitSchema.parse(lease.receipt.usage_unit)}`, { value: formatNumber(lease.receipt.usage_value, locale) })}`
                                 : t('admin.notReceived')}
                             </p>
+                            {lease.return_requested_on && lease.return_condition ? (
+                              <p className="mt-1 text-[#526c61]">
+                                {t('leaseEnd.customerReportedReturn')}:{' '}
+                                {t(
+                                  `condition.${assetConditionSchema.parse(lease.return_condition)}`
+                                )}
+                                {lease.return_usage_value !== null
+                                  ? ` · ${t(`usage.${usageUnitSchema.parse(asset.usage_unit)}`, { value: formatNumber(lease.return_usage_value, locale) })}`
+                                  : ''}
+                              </p>
+                            ) : null}
                             {asset.inspections
                               .filter((inspection) => inspection.lease_id === lease.id)
                               .map((inspection) => (

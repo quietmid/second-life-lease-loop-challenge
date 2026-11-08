@@ -8,6 +8,7 @@ import {
   loadVatRates,
 } from '@/data/load';
 import { assetCategorySchema, isoDateSchema } from '@/data/schemas';
+import type { AssetCondition } from '@/data/schemas';
 import { evaluateApplication } from '@/domain/application';
 import { monthlyFactorFor } from '@/domain/coefficient';
 import { planInvoices } from '@/domain/invoices';
@@ -272,7 +273,9 @@ export async function requestDemoReturn(
   db: PrismaClient,
   leaseId: string,
   customerId: string,
-  date: string
+  date: string,
+  condition: AssetCondition,
+  usageValue: number
 ) {
   return withAudit(
     db,
@@ -281,14 +284,23 @@ export async function requestDemoReturn(
       action: 'demo_return.requested',
       entityType: 'demo_lease',
       entityId: leaseId,
-      details: { date, simulated: true },
+      details: { date, condition, usageValue, simulated: true },
     },
     async (tx) => {
-      const lease = await tx.demoLease.findUnique({ where: { id: leaseId } });
+      const lease = await tx.demoLease.findUnique({
+        where: { id: leaseId },
+        include: { asset: true },
+      });
       if (!lease || lease.customer_id !== customerId)
         throw new ApiError(404, 'LEASE_NOT_FOUND', 'Demo lease not found.');
       if (lease.bought_out_on)
         throw new ApiError(409, 'LEASE_BOUGHT_OUT', 'This item was bought out at lease end.');
+      if (!Number.isSafeInteger(usageValue) || usageValue < lease.asset.usage_value)
+        throw new ApiError(
+          400,
+          'INVALID_RETURN_USAGE',
+          'Return usage cannot be below the recorded counter.'
+        );
       const eligible = canRequestReturn(lease.end_date, date, lease.return_requested_on !== null);
       if (!eligible.ok)
         throw new ApiError(
@@ -298,7 +310,11 @@ export async function requestDemoReturn(
         );
       const updated = await tx.demoLease.update({
         where: { id: leaseId },
-        data: { return_requested_on: date },
+        data: {
+          return_requested_on: date,
+          return_condition: condition,
+          return_usage_value: usageValue,
+        },
       });
       await tx.asset.update({ where: { id: lease.asset_id }, data: { status: 'returned' } });
       return updated;

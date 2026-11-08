@@ -30,17 +30,23 @@ creates a legally binding signature.
   The request remains pending; the item is not available for re-lease.
 - Customer and admin navigation is present. The customer can create a demo quote,
   complete an application, simulate an identity check and signing, view invoices,
-  confirm an asset's received condition and usage, and request a return.
+  confirm an asset's received condition and usage, and request a return with
+  their reported condition and usage counter.
 - The admin view shows current leases by customer, return requests awaiting
   inspection, invoice breakdowns, audit events, and item passports. Admins can
   inspect returned items, calculate refurbishment and matching decisions, and
   make available an unassigned item when wait-list deadlines have passed. A
   matched waiting-list offer can be accepted as a simulated lease.
 - Customers can preview and confirm a fair early exit or separately choose the
-  end-of-term buyout. Items then follow the inspection workflow.
+  end-of-term buyout from their account or lease page. Items then follow the
+  inspection workflow.
+- Customers can view issued and upcoming invoices against the selected demo
+  date, see paid/unpaid/overdue status, and record a mock bank transfer,
+  MobilePay, or card payment. The admin invoice history reads the same updated
+  invoice record and displays its payment method and date.
 - `/[locale]/scenarios` provides direct entry points for all ten challenge cards.
 - Identity checks, signing, and invoices are simulations; no real authentication,
-  legal signature, or payment flow is implemented.
+  legal signature, or payment processing is implemented.
 - Business rules belong in `src/domain/` as pure functions with nearby tests;
   money is integer euro cents; data changes use `withAudit()`.
 
@@ -216,6 +222,22 @@ ten challenge cards have browser-level coverage. `npm run check:all` passes all
 checks except its default Turbopack build in restricted environments where the
 CSS worker cannot bind a local socket; `PLAYWRIGHT=1 npm run build -- --webpack`
 completes the production build successfully.
+
+### 6. Invoice transactions and return declarations — implemented
+
+- Store a payment state, selected mock method, and simulated paid date on each
+  invoice. Derive upcoming, unpaid, overdue, and paid display states from the
+  invoice dates and selected demo date.
+- Let a customer record a mock payment by bank transfer, MobilePay, or card.
+  Audit the action and show the updated invoice in both customer lease history
+  and admin invoice history.
+- Collect the customer's reported condition and usage counter during normal or
+  early return. Keep that declaration distinct from the later admin inspection.
+- Make early-exit actions visible from the customer account as well as lease
+  details, with end-of-term return and buyout actions available at lease end.
+
+**Done when:** a presenter can record a mock payment, see the matching admin
+invoice status, and submit return condition and usage before admin inspection.
 
 ## Engineering checkpoints for every phase
 

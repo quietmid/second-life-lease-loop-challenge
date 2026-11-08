@@ -5,6 +5,7 @@ import type { Messages } from '@/i18n/get-t';
 import type { Locale } from '@/i18n/locales';
 import { formatEuro } from '@/domain/money';
 import { intlLocale } from '@/i18n/locales';
+import type { AssetCondition, UsageUnit } from '@/data/schemas';
 
 type EarlyExitPreview = {
   settlementCents: number;
@@ -21,6 +22,9 @@ type Props = {
   date: string;
   signedDate: string;
   endDate: string;
+  condition: AssetCondition;
+  usageValue: number;
+  usageUnit: UsageUnit;
   buyoutCents: number;
   locale: Locale;
   messages: Messages;
@@ -32,6 +36,9 @@ export function LeaseEndActions({
   date,
   signedDate,
   endDate,
+  condition,
+  usageValue,
+  usageUnit,
   buyoutCents,
   locale,
   messages: t,
@@ -42,6 +49,10 @@ export function LeaseEndActions({
   const [showBuyoutConfirm, setShowBuyoutConfirm] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [returnCondition, setReturnCondition] = useState(condition);
+  const [returnUsage, setReturnUsage] = useState(String(usageValue));
+  const usageMessage = t[`usage.${usageUnit}`];
+  const usageUnitLabel = usageMessage.replace('{value}', '').trim();
   const format = (cents: number) => formatEuro(cents, intlLocale[locale]);
   const earlyExitDate = date > signedDate && date < endDate;
 
@@ -78,7 +89,12 @@ export function LeaseEndActions({
       const response = await fetch(`/api/demo/leases/${encodeURIComponent(leaseId)}/early-exit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerId, date: exitDate }),
+        body: JSON.stringify({
+          customerId,
+          date: exitDate,
+          condition: returnCondition,
+          usageValue: Number(returnUsage),
+        }),
       });
       const body = await response.json();
       if (!response.ok || !body.success) {
@@ -167,6 +183,35 @@ export function LeaseEndActions({
               <dd>{format(preview.buyoutCents)}</dd>
             </dl>
             <p className="mt-3 text-[#526c61]">{t['leaseEnd.earlyExitExplanation']}</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1 font-semibold">
+                {t['leaseEnd.returnCondition']}
+                <select
+                  value={returnCondition}
+                  onChange={(event) => setReturnCondition(event.target.value as AssetCondition)}
+                  className="min-h-10 rounded-lg border border-[#cbd8cc] bg-white px-3 font-normal"
+                >
+                  {(['new', 'like_new', 'good', 'fair', 'poor'] as const).map((value) => (
+                    <option value={value} key={value}>
+                      {t[`condition.${value}`]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1 font-semibold">
+                {t['leaseEnd.returnUsage']} · {usageUnitLabel}
+                <input
+                  type="number"
+                  min={usageValue}
+                  max={Number.MAX_SAFE_INTEGER}
+                  step="1"
+                  required
+                  value={returnUsage}
+                  onChange={(event) => setReturnUsage(event.target.value)}
+                  className="min-h-10 rounded-lg border border-[#cbd8cc] bg-white px-3 font-normal"
+                />
+              </label>
+            </div>
             <button
               type="button"
               onClick={confirmEarlyExit}

@@ -69,6 +69,8 @@ model DemoLease {
   buyout_cents        Int
   price_version       Int
   return_requested_on String?
+  return_condition    String?
+  return_usage_value  Int?
   bought_out_on       String?
   invoices            DemoInvoice[]
   receipt             DemoAssetReceipt?
@@ -151,6 +153,9 @@ model DemoInvoice {
   vat_rate_percent     Float
   vat_cents            Int
   total_cents          Int
+  payment_status       String    @default("unpaid") // unpaid | paid
+  payment_method       String? // bank_transfer | mobilepay | card
+  paid_on              String?
 
   @@index([lease_id, issue_date])
 }

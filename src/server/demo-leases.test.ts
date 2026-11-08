@@ -4,6 +4,7 @@ import { createTestDb } from '../../tests/helpers/test-db';
 import { seedAssets } from './assets';
 import { recordDemoSecurityAction } from './demo-security';
 import { createDemoQuote, previewDemoQuote, requestDemoReturn, signDemoLease } from './demo-leases';
+import { recordDemoPayment } from './demo-invoices';
 import type { PrismaClient } from './prisma-client';
 
 let db: PrismaClient;
@@ -62,6 +63,29 @@ describe('persisted demo lease', () => {
     expect(lease.monthly_net_cents).toBe(10730);
     expect(lease.end_date).toBe('2029-11-06');
     expect(await db.demoInvoice.count({ where: { lease_id: lease.id } })).toBe(37);
+    const firstInvoice = await db.demoInvoice.findFirstOrThrow({
+      where: { lease_id: lease.id },
+      orderBy: { issue_date: 'asc' },
+    });
+    await recordDemoPayment(db, firstInvoice.id, {
+      customerId: 'cust-aino',
+      date: '2026-11-06',
+      method: 'mobilepay',
+    });
+    expect(
+      await db.demoInvoice.findUniqueOrThrow({ where: { id: firstInvoice.id } })
+    ).toMatchObject({
+      payment_status: 'paid',
+      payment_method: 'mobilepay',
+      paid_on: '2026-11-06',
+    });
+    await expect(
+      recordDemoPayment(db, firstInvoice.id, {
+        customerId: 'cust-aino',
+        date: '2026-11-06',
+        method: 'card',
+      })
+    ).rejects.toMatchObject({ status: 409 });
     expect((await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } })).status).toBe(
       'reserved'
     );
@@ -73,25 +97,39 @@ describe('persisted demo lease', () => {
         answers,
       })
     ).rejects.toMatchObject({ status: 409 });
-    await expect(requestDemoReturn(db, lease.id, 'cust-aino', '2029-11-05')).rejects.toMatchObject({
+    await expect(
+      requestDemoReturn(db, lease.id, 'cust-aino', '2029-11-05', 'good', 5000)
+    ).rejects.toMatchObject({
       status: 409,
     });
-    await expect(requestDemoReturn(db, lease.id, 'cust-mikko', '2029-11-06')).rejects.toMatchObject(
-      { status: 404 }
-    );
-    await requestDemoReturn(db, lease.id, 'cust-aino', '2029-11-06');
-    await expect(requestDemoReturn(db, lease.id, 'cust-aino', '2029-11-06')).rejects.toMatchObject({
+    await expect(
+      requestDemoReturn(db, lease.id, 'cust-mikko', '2029-11-06', 'good', 5000)
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(
+      requestDemoReturn(db, lease.id, 'cust-aino', '2029-11-06', 'fair', -1)
+    ).rejects.toMatchObject({
+      status: 400,
+    });
+    await requestDemoReturn(db, lease.id, 'cust-aino', '2029-11-06', 'fair', 7200);
+    await expect(
+      requestDemoReturn(db, lease.id, 'cust-aino', '2029-11-06', 'fair', 7200)
+    ).rejects.toMatchObject({
       status: 409,
     });
     expect((await db.asset.findUniqueOrThrow({ where: { id: 'ebike-003' } })).status).toBe(
       'returned'
     );
+    expect(await db.demoLease.findUniqueOrThrow({ where: { id: lease.id } })).toMatchObject({
+      return_condition: 'fair',
+      return_usage_value: 7200,
+    });
     expect(
       (await db.auditLog.findMany({ orderBy: { id: 'asc' } })).map((entry) => entry.action)
     ).toEqual([
       'demo_quote.created',
       'demo_identity_check.success',
       'demo_lease.signed',
+      'demo_invoice.payment_recorded',
       'demo_return.requested',
     ]);
   });

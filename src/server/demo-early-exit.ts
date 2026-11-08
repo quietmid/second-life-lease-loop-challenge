@@ -4,7 +4,7 @@ import { calculateEarlyExit } from '@/domain/early-exit';
 import { monthlyFactorFor } from '@/domain/coefficient';
 import { assetAgeInMonths, estimateMarketValueCents } from '@/domain/second-life';
 import { listPriceOn } from '@/domain/price-list';
-import { isoDateSchema } from '@/data/schemas';
+import { assetConditionSchema, isoDateSchema } from '@/data/schemas';
 import { ApiError } from './api-response';
 import { withAudit } from './audit';
 import type { PrismaClient } from './prisma-client';
@@ -14,6 +14,12 @@ export const earlyExitInputSchema = z.strictObject({
   date: isoDateSchema,
 });
 export type EarlyExitInput = z.infer<typeof earlyExitInputSchema>;
+
+export const confirmEarlyExitInputSchema = earlyExitInputSchema.extend({
+  condition: assetConditionSchema,
+  usageValue: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+});
+export type ConfirmEarlyExitInput = z.infer<typeof confirmEarlyExitInputSchema>;
 
 /** Returns the preview calculation without changing the lease or item. */
 export async function previewDemoEarlyExit(
@@ -84,7 +90,7 @@ export async function previewDemoEarlyExit(
 export async function requestDemoEarlyExit(
   db: PrismaClient,
   leaseId: string,
-  input: EarlyExitInput
+  input: ConfirmEarlyExitInput
 ) {
   const preview = await previewDemoEarlyExit(db, leaseId, input);
   return withAudit(
@@ -96,13 +102,18 @@ export async function requestDemoEarlyExit(
       entityId: leaseId,
       details: {
         date: input.date,
+        condition: input.condition,
+        usageValue: input.usageValue,
         settlementCents: preview.settlementCents,
         marketValueCents: preview.marketValueCents,
         simulated: true,
       },
     },
     async (tx) => {
-      const lease = await tx.demoLease.findUnique({ where: { id: leaseId } });
+      const lease = await tx.demoLease.findUnique({
+        where: { id: leaseId },
+        include: { asset: true },
+      });
       if (
         !lease ||
         lease.customer_id !== input.customerId ||
@@ -111,6 +122,12 @@ export async function requestDemoEarlyExit(
       ) {
         throw new ApiError(409, 'LEASE_CLOSED', 'This demo lease can no longer be ended early.');
       }
+      if (!Number.isSafeInteger(input.usageValue) || input.usageValue < lease.asset.usage_value)
+        throw new ApiError(
+          400,
+          'INVALID_RETURN_USAGE',
+          'Return usage cannot be below the recorded counter.'
+        );
       const result = await tx.demoEarlyExit.create({
         data: {
           lease_id: leaseId,
@@ -123,7 +140,11 @@ export async function requestDemoEarlyExit(
       });
       await tx.demoLease.update({
         where: { id: leaseId },
-        data: { return_requested_on: input.date },
+        data: {
+          return_requested_on: input.date,
+          return_condition: input.condition,
+          return_usage_value: input.usageValue,
+        },
       });
       await tx.asset.update({ where: { id: lease.asset_id }, data: { status: 'returned' } });
       return result;

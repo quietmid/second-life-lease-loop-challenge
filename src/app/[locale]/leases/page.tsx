@@ -2,9 +2,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ReturnButton } from '@/components/return-button';
 import { LeaseEndActions } from '@/components/lease-end-actions';
+import { InvoicePayment } from '@/components/invoice-payment';
 import { loadCustomers } from '@/data/load';
-import { isoDateSchema } from '@/data/schemas';
+import { assetConditionSchema, isoDateSchema, usageUnitSchema } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
+import type { PaymentMethod } from '@/domain/invoice-status';
 import { getT, messages } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { db } from '@/server/db';
@@ -25,7 +27,12 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
     );
   const leases = await db.demoLease.findMany({
     where: { customer_id: customerId },
-    include: { asset: true, early_exit: true, invoices: { orderBy: { issue_date: 'asc' } } },
+    include: {
+      asset: true,
+      receipt: true,
+      early_exit: true,
+      invoices: { orderBy: { issue_date: 'asc' } },
+    },
     orderBy: { created_at: 'desc' },
   });
   const format = (cents: number) => formatEuro(cents, intlLocale[locale]);
@@ -66,6 +73,9 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
             )}
           </p>
           <p className="mt-4 text-sm text-[#526c61]">{t('journey.invoiceNote')}</p>
+          <p className="mt-2 rounded-lg bg-[#f0f3e8] p-3 text-sm text-[#526c61]">
+            {t('payment.mockNotice')}
+          </p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
@@ -75,6 +85,7 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
                   <th>{t('journey.net')}</th>
                   <th>{t('journey.vat')}</th>
                   <th>{t('journey.total')}</th>
+                  <th>{t('payment.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -87,6 +98,19 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
                       {invoice.vat_rate_percent}% · {format(invoice.vat_cents)}
                     </td>
                     <td>{format(invoice.total_cents)}</td>
+                    <td className="p-2">
+                      <InvoicePayment
+                        invoiceId={invoice.id}
+                        customerId={customerId}
+                        issueDate={invoice.issue_date}
+                        dueDate={invoice.due_date}
+                        paymentStatus={invoice.payment_status as 'unpaid' | 'paid'}
+                        paymentMethod={invoice.payment_method as PaymentMethod | null}
+                        paidOn={invoice.paid_on}
+                        date={date}
+                        messages={messages[locale]}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -111,8 +135,15 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
                   leaseId={lease.id}
                   customerId={customerId}
                   date={date}
+                  condition={assetConditionSchema.parse(
+                    lease.receipt?.condition ?? lease.asset.condition
+                  )}
+                  usageValue={lease.receipt?.usage_value ?? lease.asset.usage_value}
+                  usageUnit={usageUnitSchema.parse(lease.asset.usage_unit)}
                   label={t('journey.return')}
                   errorMessage={t('journey.error')}
+                  locale={locale}
+                  messages={messages[locale]}
                 />
                 <LeaseEndActions
                   leaseId={lease.id}
@@ -120,6 +151,11 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
                   date={date}
                   signedDate={lease.signed_date}
                   endDate={lease.end_date}
+                  condition={assetConditionSchema.parse(
+                    lease.receipt?.condition ?? lease.asset.condition
+                  )}
+                  usageValue={lease.receipt?.usage_value ?? lease.asset.usage_value}
+                  usageUnit={usageUnitSchema.parse(lease.asset.usage_unit)}
                   buyoutCents={lease.buyout_cents}
                   locale={locale}
                   messages={messages[locale]}
@@ -132,6 +168,11 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
                 date={date}
                 signedDate={lease.signed_date}
                 endDate={lease.end_date}
+                condition={assetConditionSchema.parse(
+                  lease.receipt?.condition ?? lease.asset.condition
+                )}
+                usageValue={lease.receipt?.usage_value ?? lease.asset.usage_value}
+                usageUnit={usageUnitSchema.parse(lease.asset.usage_unit)}
                 buyoutCents={lease.buyout_cents}
                 locale={locale}
                 messages={messages[locale]}

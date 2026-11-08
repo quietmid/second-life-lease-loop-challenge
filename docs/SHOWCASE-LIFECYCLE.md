@@ -14,7 +14,12 @@ synthetic data-pack identity is used by a journey.
 - `DemoLease` snapshots the signed quote terms and links to the asset and quote.
   Its synthetic customer ID remains the data-pack ID; there is no customer table
   or real personal data. Each lease owns its generated `DemoInvoice` rows and
-  optional receipt, return request, and early-exit outcome.
+  optional receipt, customer-reported return condition/usage, and early-exit
+  outcome.
+- `DemoInvoice` snapshots issue/due dates, billing period, net/VAT/total cents,
+  and also stores the mock payment status, method, and paid date. New invoices
+  begin unpaid. Upcoming, unpaid, overdue, and paid display states are derived
+  from the invoice dates, stored payment status, and selected demo date.
 - `DemoReturnInspection` belongs to an asset and can optionally link to the
   lease that returned it. The optional link supports the challenge's seeded
   historical items without inventing database lease/customer history for them.
@@ -28,6 +33,11 @@ synthetic data-pack identity is used by a journey.
   the lease separately because it is an end-of-term outcome.
 - `AuditLog` records each persisted mutation in the same transaction via
   `withAudit()`.
+
+Customer return condition and usage are a reported declaration on the lease;
+they do not overwrite the asset's verified state. The later admin inspection is
+stored separately in `DemoReturnInspection`. A mock invoice payment updates the
+invoice and audit record atomically and does not call a payment provider.
 
 All generated IDs and relationships are SQLite/Prisma managed. Foreign keys
 protect quote, lease, invoice, receipt, inspection, refurbishment and outcome

@@ -82,11 +82,17 @@ describe('early exit settlement', () => {
     const exit = await requestDemoEarlyExit(db, lease.id, {
       customerId: 'cust-aino',
       date: '2027-06-05',
+      condition: 'fair',
+      usageValue: 7200,
     });
     expect(exit).toMatchObject({
       requested_on: '2027-06-05',
       months_elapsed: 7,
       settlement_cents: preview.settlementCents,
+    });
+    expect(await db.demoLease.findUniqueOrThrow({ where: { id: lease.id } })).toMatchObject({
+      return_condition: 'fair',
+      return_usage_value: 7200,
     });
     expect(await db.asset.findUniqueOrThrow({ where: { id: lease.asset_id } })).toMatchObject({
       status: 'returned',
