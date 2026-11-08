@@ -52,11 +52,11 @@ model DemoQuote {
 }
 
 model DemoLease {
-  id                  String        @id @default(cuid())
-  quote_id            String        @unique
-  quote               DemoQuote     @relation(fields: [quote_id], references: [id])
+  id                  String            @id @default(cuid())
+  quote_id            String            @unique
+  quote               DemoQuote         @relation(fields: [quote_id], references: [id])
   asset_id            String
-  asset               Asset         @relation(fields: [asset_id], references: [id])
+  asset               Asset             @relation(fields: [asset_id], references: [id])
   customer_id         String
   signed_date         String
   end_date            String
@@ -68,9 +68,22 @@ model DemoLease {
   price_version       Int
   return_requested_on String?
   invoices            DemoInvoice[]
-  created_at          DateTime      @default(now())
+  receipt             DemoAssetReceipt?
+  created_at          DateTime          @default(now())
 
   @@index([customer_id])
+}
+
+// Customer's one-time confirmation of the item's delivered state for this lease.
+model DemoAssetReceipt {
+  id          String    @id @default(cuid())
+  lease_id    String    @unique
+  lease       DemoLease @relation(fields: [lease_id], references: [id])
+  received_on String
+  condition   String // new | like_new | good | fair | poor
+  usage_unit  String // km | battery_cycles | engine_hours
+  usage_value Int
+  created_at  DateTime  @default(now())
 }
 
 model DemoInvoice {

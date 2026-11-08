@@ -88,7 +88,7 @@ export function ApplicationForm({
         setError(t['journey.error']);
         return;
       }
-      router.push(`/${locale}/leases?${new URLSearchParams({ profile: customerId, date })}`);
+      router.push(`/${locale}/account?${new URLSearchParams({ profile: customerId, date })}`);
       router.refresh();
     } catch {
       setError(t['journey.error']);

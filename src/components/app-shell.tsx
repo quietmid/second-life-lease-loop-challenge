@@ -90,7 +90,11 @@ export function AppShell({ children, locale, customers, defaultDate, messages }:
           href: `/${locale}/catalogue`,
           active: pathname.endsWith('/catalogue'),
         },
-        { label: messages.account, disabled: true },
+        {
+          label: messages.account,
+          href: `/${locale}/account`,
+          active: pathname === `/${locale}/account`,
+        },
         {
           label: messages.lease,
           href: `/${locale}/leases`,
