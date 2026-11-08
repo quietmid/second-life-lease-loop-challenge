@@ -44,6 +44,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<'/[
               currentLeases: t('nav.currentLeases'),
               returnedItems: t('nav.returnedItems'),
               invoiceHistory: t('nav.invoiceHistory'),
+              assetHistory: t('nav.assetHistory'),
               endDemo: t('nav.endDemo'),
               profileLabel: t('demo.profileLabel'),
               customerProfile: t('demo.customerProfile'),

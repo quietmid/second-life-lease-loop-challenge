@@ -29,8 +29,12 @@ creates a legally binding signature.
 - Move the simulated date to the lease end date or later to request a return.
   The request remains pending; the item is not available for re-lease.
 - Customer and admin navigation is present. The customer can create a demo quote,
-  complete an application, simulate signing, view invoices, and request a return.
-  Admin inspection, refurbishment, and the remaining account views are planned.
+  complete an application, simulate an identity check and signing, view invoices,
+  confirm an asset's received condition and usage, and request a return.
+- The read-only admin view shows current leases by customer, return requests that
+  are awaiting inspection, invoice breakdowns, audit events, and item passports
+  from the same lease, invoice, and receipt records. Payment, inspection,
+  refurbishment, and next-life decisions are not implemented.
 - Identity checks, signing, and invoices are simulations; no real authentication,
   legal signature, or payment flow is implemented.
 - Business rules belong in `src/domain/` as pure functions with nearby tests;

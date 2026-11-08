@@ -19,6 +19,7 @@ export type AppShellMessages = {
   currentLeases: string;
   returnedItems: string;
   invoiceHistory: string;
+  assetHistory: string;
   endDemo: string;
   profileLabel: string;
   customerProfile: string;
@@ -48,6 +49,7 @@ export function AppShell({ children, locale, customers, defaultDate, messages }:
   const profile = searchParams.get('profile') ?? customers[0]?.id ?? '';
   const isAdmin = profile === 'admin';
   const selectedDate = searchParams.get('date') ?? defaultDate;
+  const adminTab = searchParams.get('tab') ?? 'leases';
 
   function applyDemoContext(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,8 +70,13 @@ export function AppShell({ children, locale, customers, defaultDate, messages }:
   }
 
   function contextualHref(path: string) {
-    const query = searchParams.toString();
-    return query ? `${path}?${query}` : path;
+    const [pathname, targetQuery] = path.split('?');
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (targetQuery) {
+      new URLSearchParams(targetQuery).forEach((value, key) => nextParams.set(key, value));
+    }
+    const query = nextParams.toString();
+    return query ? `${pathname}?${query}` : (pathname ?? path);
   }
 
   const navItems = isAdmin
@@ -79,9 +86,26 @@ export function AppShell({ children, locale, customers, defaultDate, messages }:
           href: `/${locale}/catalogue`,
           active: pathname.endsWith('/catalogue'),
         },
-        { label: messages.currentLeases, disabled: true },
-        { label: messages.returnedItems, disabled: true },
-        { label: messages.invoiceHistory, disabled: true },
+        {
+          label: messages.currentLeases,
+          href: `/${locale}/admin?tab=leases`,
+          active: pathname.endsWith('/admin') && adminTab === 'leases',
+        },
+        {
+          label: messages.returnedItems,
+          href: `/${locale}/admin?tab=returns`,
+          active: pathname.endsWith('/admin') && adminTab === 'returns',
+        },
+        {
+          label: messages.invoiceHistory,
+          href: `/${locale}/admin?tab=invoices`,
+          active: pathname.endsWith('/admin') && adminTab === 'invoices',
+        },
+        {
+          label: messages.assetHistory,
+          href: `/${locale}/admin?tab=passports`,
+          active: pathname.endsWith('/admin') && adminTab === 'passports',
+        },
       ]
     : [
         { label: messages.home, href: `/${locale}`, active: pathname === `/${locale}` },
