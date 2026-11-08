@@ -10,9 +10,33 @@ You are helping a hackathon team build **Lease Loop**. The challenge is in `CHAL
 - **Database changes:** edit `prisma/schema.prisma`, then run `npm run db:migrate`. Never hand-write migration SQL.
 - **UI strings** go in `src/i18n/messages/{en,fi,sv,et}.json`, with the same keys in all four.
 - **Files stay under 600 lines.** Split by responsibility.
-- **Commits** use conventional messages: `type(scope): subject`. Never use `git commit --no-verify` or `git push --no-verify`. If a hook fails, fix the cause.
 - Before saying a change is done, run `npm run check:all`; it's what CI runs.
 - Read `data/DATA.md` before using the data pack. Schemas for every data file are in `src/data/schemas.ts`.
+
+## Git commit writer and delivery
+
+For completed implementation tasks, unless the user says otherwise:
+
+1. Inspect the worktree and preserve unrelated changes. Create a descriptively
+   named feature branch before committing; never commit directly to `main`.
+2. Run the required checks and stage only the intended changes. Write an accurate
+   conventional commit message, `type(scope): subject`, with a short body when
+   needed to explain why. Include the required co-author trailer when applicable.
+3. Push the branch to a user-designated repository, then create a pull request
+   using the repository template when available. Report its link for the user to
+   review; never merge it.
+4. If the destination, permissions, checks, or hooks block delivery, report the
+   blocker and stop. Never bypass hooks with `--no-verify` or push to an
+   unconfirmed upstream repository.
+
+## Clean code
+
+- Prefer the simplest design that fully solves the requirement; avoid unrelated changes and premature abstractions.
+- Use clear, intention-revealing names and small functions with one responsibility.
+- Reuse existing helpers and patterns; avoid duplicated logic and dead code.
+- Handle errors explicitly. Do not hide failures behind broad catches, silent defaults, or success-shaped fallbacks.
+- Add comments only when they clarify why non-obvious code exists; keep the code itself readable.
+- Test behavior and edge cases, not implementation details.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
