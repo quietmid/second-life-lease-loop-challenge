@@ -120,6 +120,7 @@ export default async function AccountPage({
                   <p className="mt-3 text-sm text-[#526c61]">
                     {t('account.leasePeriod', { start: lease.signed_date, end: lease.end_date })}
                   </p>
+                  <p className="mt-1 text-sm text-[#526c61]">{t('account.leaseSimulated')}</p>
                   <dl className="mt-4 grid gap-3 sm:grid-cols-3">
                     <ProfileField
                       label={t('condition.label')}

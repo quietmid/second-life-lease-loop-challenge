@@ -19,6 +19,8 @@ type Props = {
   messages: Messages;
 };
 
+type SecurityStep = 'identity' | 'identity-success' | 'identity-failure' | 'signing';
+
 function initialAnswers(context: ApplicationContext): ApplicationAnswers {
   const c = context.customer;
   return {
@@ -53,6 +55,7 @@ export function ApplicationForm({
   const [answers, setAnswers] = useState<ApplicationAnswers>(() => initialAnswers(context));
   const [decision, setDecision] = useState<ReturnType<typeof evaluateApplication> | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [securityStep, setSecurityStep] = useState<SecurityStep>('identity');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -67,8 +70,55 @@ export function ApplicationForm({
     event.preventDefault();
     const result = evaluateApplication(questions, context, applicable.answers);
     setDecision(result);
-    setConfirming(result.status === 'approved');
+    if (result.status === 'approved') {
+      setSecurityStep('identity');
+      setConfirming(true);
+    }
   }
+
+  async function recordSecurityAction(stage: 'identity' | 'signing', outcome: string) {
+    const response = await fetch(`/api/demo/quotes/${encodeURIComponent(quoteId)}/security`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customerId, stage, outcome }),
+    });
+    const body = await response.json();
+    return response.ok && body.success;
+  }
+
+  async function chooseIdentityOutcome(outcome: 'success' | 'failure') {
+    setBusy(true);
+    setError('');
+    try {
+      if (!(await recordSecurityAction('identity', outcome))) {
+        setError(t['security.error']);
+        return;
+      }
+      setSecurityStep(outcome === 'success' ? 'identity-success' : 'identity-failure');
+    } catch {
+      setError(t['security.error']);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelSecurityStep() {
+    setBusy(true);
+    setError('');
+    try {
+      const stage = securityStep === 'signing' ? 'signing' : 'identity';
+      if (!(await recordSecurityAction(stage, 'cancelled'))) {
+        setError(t['security.error']);
+        return;
+      }
+      setConfirming(false);
+    } catch {
+      setError(t['security.error']);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function sign() {
     setBusy(true);
     setError('');
@@ -94,7 +144,6 @@ export function ApplicationForm({
       setError(t['journey.error']);
     } finally {
       setBusy(false);
-      setConfirming(false);
     }
   }
   return (
@@ -170,33 +219,136 @@ export function ApplicationForm({
       <dialog
         ref={dialogRef}
         onClose={() => setConfirming(false)}
+        onCancel={(event) => {
+          event.preventDefault();
+          void cancelSecurityStep();
+        }}
         aria-labelledby="sign-title"
         className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-white p-6 text-[#183b32] shadow-xl backdrop:bg-black/50"
       >
-        <h2 id="sign-title" className="text-2xl font-semibold">
-          {t['journey.confirmTitle']}
-        </h2>
-        <p role="status" className="mt-3 rounded-lg bg-[#e6f0e2] p-4 font-semibold">
-          {t['journey.approved']}
-        </p>
-        <p className="mt-3 text-[#526c61]">{t['journey.confirmDescription']}</p>
-        <div className="mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={() => setConfirming(false)}
-            className="rounded-lg border border-[#cbd8cc] px-4 py-3"
-          >
-            {t['journey.cancel']}
-          </button>
-          <button
-            type="button"
-            onClick={sign}
-            disabled={busy}
-            className="rounded-lg bg-[#1f5948] px-4 py-3 font-semibold text-white disabled:opacity-50"
-          >
-            {t['journey.sign']}
-          </button>
-        </div>
+        {securityStep === 'identity' ? (
+          <>
+            <h2 id="sign-title" className="text-2xl font-semibold">
+              {t['security.identityTitle']}
+            </h2>
+            <p role="status" className="mt-3 rounded-lg bg-[#e6f0e2] p-4 font-semibold">
+              {t['journey.approved']}
+            </p>
+            <p className="mt-3 text-[#526c61]">{t['security.identityDescription']}</p>
+            <p className="mt-2 text-sm text-[#526c61]">{t['security.identityCaveat']}</p>
+            <div className="mt-6 grid gap-3">
+              <button
+                type="button"
+                onClick={() => chooseIdentityOutcome('success')}
+                disabled={busy}
+                className="rounded-lg bg-[#1f5948] px-4 py-3 text-left font-semibold text-white disabled:opacity-50"
+              >
+                {t['security.simulateSuccess']}
+              </button>
+              <button
+                type="button"
+                onClick={() => chooseIdentityOutcome('failure')}
+                disabled={busy}
+                className="rounded-lg border border-[#cbd8cc] px-4 py-3 text-left disabled:opacity-50"
+              >
+                {t['security.simulateFailure']}
+              </button>
+              <button
+                type="button"
+                onClick={cancelSecurityStep}
+                disabled={busy}
+                className="rounded-lg px-4 py-3 text-left text-[#526c61] disabled:opacity-50"
+              >
+                {t['journey.cancel']}
+              </button>
+            </div>
+          </>
+        ) : securityStep === 'identity-success' ? (
+          <>
+            <h2 id="sign-title" className="text-2xl font-semibold">
+              {t['security.identityTitle']}
+            </h2>
+            <p role="status" className="mt-4 rounded-lg bg-[#e6f0e2] p-4">
+              {t['security.identitySuccess']}
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setSecurityStep('signing')}
+                className="rounded-lg bg-[#1f5948] px-4 py-3 font-semibold text-white"
+              >
+                {t['security.continueToSigning']}
+              </button>
+              <button
+                type="button"
+                onClick={cancelSecurityStep}
+                disabled={busy}
+                className="rounded-lg border border-[#cbd8cc] px-4 py-3 disabled:opacity-50"
+              >
+                {t['journey.cancel']}
+              </button>
+            </div>
+          </>
+        ) : securityStep === 'identity-failure' ? (
+          <>
+            <h2 id="sign-title" className="text-2xl font-semibold">
+              {t['security.identityTitle']}
+            </h2>
+            <p role="status" className="mt-4 rounded-lg bg-amber-50 p-4 text-amber-950">
+              {t['security.identityFailure']}
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setSecurityStep('identity')}
+                className="rounded-lg bg-[#1f5948] px-4 py-3 font-semibold text-white"
+              >
+                {t['security.tryAnotherOutcome']}
+              </button>
+              <button
+                type="button"
+                onClick={cancelSecurityStep}
+                disabled={busy}
+                className="rounded-lg border border-[#cbd8cc] px-4 py-3 disabled:opacity-50"
+              >
+                {t['journey.cancel']}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 id="sign-title" className="text-2xl font-semibold">
+              {t['journey.confirmTitle']}
+            </h2>
+            <p role="status" className="mt-3 rounded-lg bg-[#e6f0e2] p-4 font-semibold">
+              {t['journey.approved']}
+            </p>
+            <p className="mt-3 text-[#526c61]">{t['journey.confirmDescription']}</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={cancelSecurityStep}
+                disabled={busy}
+                className="rounded-lg border border-[#cbd8cc] px-4 py-3 disabled:opacity-50"
+              >
+                {t['journey.cancel']}
+              </button>
+              <button
+                type="button"
+                onClick={sign}
+                disabled={busy}
+                className="rounded-lg bg-[#1f5948] px-4 py-3 font-semibold text-white disabled:opacity-50"
+              >
+                {t['journey.sign']}
+              </button>
+            </div>
+          </>
+        )}
+        {error ? (
+          <p role="alert" className="mt-4 text-sm text-red-800">
+            {error}
+          </p>
+        ) : null}
       </dialog>
     </>
   );

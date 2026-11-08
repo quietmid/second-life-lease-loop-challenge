@@ -193,6 +193,29 @@ export async function signDemoLease(db: PrismaClient, quoteId: string, input: Si
       details: { simulated: true },
     },
     async (tx) => {
+      const latestIdentityAction = await tx.auditLog.findFirst({
+        where: {
+          actor: `demo:${input.customerId}`,
+          entity_type: 'demo_quote',
+          entity_id: quoteId,
+          action: {
+            in: [
+              'demo_identity_check.success',
+              'demo_identity_check.failure',
+              'demo_identity_check.cancelled',
+              'demo_signing.cancelled',
+            ],
+          },
+        },
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+      });
+      if (latestIdentityAction?.action !== 'demo_identity_check.success') {
+        throw new ApiError(
+          409,
+          'IDENTITY_CHECK_REQUIRED',
+          'Complete the simulated identity check successfully before signing.'
+        );
+      }
       const updated = await tx.asset.updateMany({
         where: { id: preview.quote.asset_id, status: 'available' },
         data: { status: 'reserved' },

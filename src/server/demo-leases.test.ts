@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { loadAssets } from '@/data/load';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { seedAssets } from './assets';
+import { recordDemoSecurityAction } from './demo-security';
 import { createDemoQuote, previewDemoQuote, requestDemoReturn, signDemoLease } from './demo-leases';
 import type { PrismaClient } from './prisma-client';
 
@@ -44,6 +45,11 @@ describe('persisted demo lease', () => {
     const preview = await previewDemoQuote(db, quote.id, 'cust-aino', '2026-11-06');
     expect(preview.priceCents).toBe(389000);
     expect(preview.locked).toBe(true);
+    await recordDemoSecurityAction(db, quote.id, {
+      customerId: 'cust-aino',
+      stage: 'identity',
+      outcome: 'success',
+    });
     const lease = await signDemoLease(db, quote.id, {
       customerId: 'cust-aino',
       signingDate: '2026-11-06',
@@ -79,7 +85,39 @@ describe('persisted demo lease', () => {
     );
     expect(
       (await db.auditLog.findMany({ orderBy: { id: 'asc' } })).map((entry) => entry.action)
-    ).toEqual(['demo_quote.created', 'demo_lease.signed', 'demo_return.requested']);
+    ).toEqual([
+      'demo_quote.created',
+      'demo_identity_check.success',
+      'demo_lease.signed',
+      'demo_return.requested',
+    ]);
+  });
+
+  it('requires the latest identity check to succeed before signing', async () => {
+    const quote = await createDemoQuote(db, {
+      assetId: 'ebike-003',
+      customerId: 'cust-aino',
+      quoteDate: '2026-11-05',
+      termMonths: 36,
+      downCents: 0,
+      locked: true,
+    });
+    const sign = () =>
+      signDemoLease(db, quote.id, {
+        customerId: 'cust-aino',
+        signingDate: '2026-11-06',
+        confirmedPriceCents: 389000,
+        answers,
+      });
+
+    await expect(sign()).rejects.toMatchObject({ status: 409, code: 'IDENTITY_CHECK_REQUIRED' });
+    await recordDemoSecurityAction(db, quote.id, {
+      customerId: 'cust-aino',
+      stage: 'identity',
+      outcome: 'success',
+    });
+    const lease = await sign();
+    expect(lease.customer_id).toBe('cust-aino');
   });
 
   it('rejects a stale confirmed price and requires a fresh confirmation', async () => {

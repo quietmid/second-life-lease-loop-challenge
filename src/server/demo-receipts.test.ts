@@ -3,6 +3,7 @@ import { loadAssets } from '@/data/load';
 import { createTestDb } from '../../tests/helpers/test-db';
 import { seedAssets } from './assets';
 import { confirmDemoAssetReceipt } from './demo-receipts';
+import { recordDemoSecurityAction } from './demo-security';
 import { createDemoQuote, signDemoLease } from './demo-leases';
 import type { PrismaClient } from './prisma-client';
 
@@ -43,6 +44,11 @@ describe('customer asset receipt', () => {
       termMonths: 36,
       downCents: 0,
       locked: true,
+    });
+    await recordDemoSecurityAction(db, quote.id, {
+      customerId: 'cust-aino',
+      stage: 'identity',
+      outcome: 'success',
     });
     return signDemoLease(db, quote.id, {
       customerId: 'cust-aino',
