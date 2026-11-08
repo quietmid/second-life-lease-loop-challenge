@@ -97,6 +97,7 @@
   "journey.incomplete": "Please complete the applicable questions.",
   "journey.review": "This demo application requires manual review; signing is unavailable.",
   "journey.declined": "This demo application cannot be approved.",
+  "journey.approved": "Your application is approved under the demo rules.",
   "journey.reason.age": "The applicant must be at least 18.",
   "journey.reason.residency": "The selected country is not supported.",
   "journey.reason.affordability": "The rent exceeds the demo affordability limit.",

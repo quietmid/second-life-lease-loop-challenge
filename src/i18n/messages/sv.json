@@ -97,6 +97,7 @@
   "journey.incomplete": "Besvara de tillämpliga frågorna.",
   "journey.review": "Demoansökan kräver manuell granskning; signering är inte tillgänglig.",
   "journey.declined": "Demoansökan kan inte godkännas.",
+  "journey.approved": "Din ansökan godkänns enligt demots regler.",
   "journey.reason.age": "Den sökande måste vara minst 18 år.",
   "journey.reason.residency": "Det valda landet stöds inte.",
   "journey.reason.affordability": "Hyran överstiger demots betalningsförmåga.",

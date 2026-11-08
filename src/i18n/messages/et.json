@@ -97,6 +97,7 @@
   "journey.incomplete": "Vasta kohaldatavatele küsimustele.",
   "journey.review": "Demotaotlus vajab käsitsi kontrolli; allkirjastamine ei ole saadaval.",
   "journey.declined": "Demotaotlust ei saa kinnitada.",
+  "journey.approved": "Sinu taotlus kiidetakse demo reeglite alusel heaks.",
   "journey.reason.age": "Taotleja peab olema vähemalt 18-aastane.",
   "journey.reason.residency": "Valitud riiki ei toetata.",
   "journey.reason.affordability": "Makse ületab demo maksevõime piiri.",

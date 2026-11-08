@@ -176,6 +176,9 @@ export function ApplicationForm({
         <h2 id="sign-title" className="text-2xl font-semibold">
           {t['journey.confirmTitle']}
         </h2>
+        <p role="status" className="mt-3 rounded-lg bg-[#e6f0e2] p-4 font-semibold">
+          {t['journey.approved']}
+        </p>
         <p className="mt-3 text-[#526c61]">{t['journey.confirmDescription']}</p>
         <div className="mt-6 flex gap-3">
           <button
