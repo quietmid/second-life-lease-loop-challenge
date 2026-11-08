@@ -77,7 +77,8 @@ test('scenarios 1 and 8 complete Aino lease, invoice, and early-exit journeys', 
   await expect(page).toHaveURL(/\/en\/account\?/);
   await expect(page.locator('#main').getByText('Aino Virtanen')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Trail 500' })).toBeVisible();
-  await page.getByRole('link', { name: 'View lease and invoices' }).first().click();
+  await page.getByRole('link', { name: 'My transactions' }).first().click();
+  await expect(page).toHaveURL(/\/en\/transactions\?/);
   await expect(page.getByText('Upcoming').first()).toBeVisible();
   await page.getByLabel('Payment method').first().selectOption('mobilepay');
   await page.getByRole('button', { name: 'Pay (demo)' }).first().click();
@@ -85,8 +86,7 @@ test('scenarios 1 and 8 complete Aino lease, invoice, and early-exit journeys', 
   await page.goto('/en/admin?profile=admin&date=2026-11-05&tab=invoices');
   await expect(page.getByText('Paid (demo)').first()).toBeVisible();
   await expect(page.getByText('MobilePay').first()).toBeVisible();
-  await page.goto('/en/account?profile=cust-aino&date=2026-11-05');
-  await page.getByRole('link', { name: 'View lease and invoices' }).first().click();
+  await page.goto('/en/leases?profile=cust-aino&date=2026-11-05');
   await expect(page.getByRole('row')).toHaveCount(38);
   await expect(page.getByText('2026-11-05').first()).toBeVisible();
 
@@ -99,6 +99,7 @@ test('scenarios 1 and 8 complete Aino lease, invoice, and early-exit journeys', 
   await page.getByRole('button', { name: 'Confirm early return and settlement' }).click();
   await expect(page.getByRole('status')).toContainText('Early return recorded');
   await page.goto('/en/admin?profile=admin&date=2027-06-05&tab=returns');
+  await expect(page.locator('#return-ebike-003')).toContainText('Early return');
   await expect(page.locator('#return-ebike-003')).toContainText('Customer reported at return');
   await expect(page.locator('#return-ebike-003')).toContainText('7,200');
 });
@@ -224,11 +225,12 @@ test('scenario 10 releases an unmatched historic item for a third-life quote', a
   await returnItem.getByLabel('Condition when returned').selectOption('fair');
   const usageInput = returnItem.getByLabel(/Usage counter when returned/);
   await usageInput.fill('10000');
-  await returnItem.getByRole('button', { name: 'Request demo return' }).click();
+  await returnItem.getByRole('button', { name: 'Simulate lease completion and return' }).click();
   await expect(returnItem.getByRole('status')).toContainText(
-    'Return requested; awaiting admin inspection'
+    'Lease completed on 2028-04-16; the item is awaiting admin inspection.'
   );
   await page.goto('/en/admin?profile=admin&date=2028-04-16&tab=returns');
+  await expect(page.locator('#return-ebike-008')).toContainText('Lease completed');
   await expect(page.locator('#return-ebike-008')).toContainText('Customer reported at return');
   await expect(page.locator('#return-ebike-008')).toContainText('10,000');
 });

@@ -135,7 +135,11 @@ export function AppShell({ children, locale, customers, defaultDate, messages }:
           href: `/${locale}/leases`,
           active: pathname === `/${locale}/leases`,
         },
-        { label: messages.transactions, disabled: true },
+        {
+          label: messages.transactions,
+          href: `/${locale}/transactions`,
+          active: pathname === `/${locale}/transactions`,
+        },
       ];
 
   return (
@@ -223,28 +227,17 @@ export function AppShell({ children, locale, customers, defaultDate, messages }:
             <ul className="flex w-full min-w-0 flex-wrap gap-2 lg:flex-col">
               {navItems.map((item) => (
                 <li key={item.label}>
-                  {item.disabled ? (
-                    <span
-                      aria-disabled="true"
-                      title={messages.comingSoon}
-                      className="flex min-h-10 max-w-full items-center rounded-lg px-3 text-sm text-[#8b9b91] lg:whitespace-nowrap"
-                    >
-                      {item.label}
-                      <span className="sr-only"> — {messages.comingSoon}</span>
-                    </span>
-                  ) : (
-                    <Link
-                      href={contextualHref(item.href ?? `/${locale}`)}
-                      aria-current={item.active ? 'page' : undefined}
-                      className={`flex min-h-10 max-w-full items-center rounded-lg px-3 text-sm font-semibold transition-colors lg:whitespace-nowrap ${
-                        item.active
-                          ? 'bg-[#e4eee2] text-[#174c3b]'
-                          : 'text-[#526c61] hover:bg-white hover:text-[#183b32]'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  )}
+                  <Link
+                    href={contextualHref(item.href)}
+                    aria-current={item.active ? 'page' : undefined}
+                    className={`flex min-h-10 max-w-full items-center rounded-lg px-3 text-sm font-semibold transition-colors lg:whitespace-nowrap ${
+                      item.active
+                        ? 'bg-[#e4eee2] text-[#174c3b]'
+                        : 'text-[#526c61] hover:bg-white hover:text-[#183b32]'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
                 </li>
               ))}
             </ul>

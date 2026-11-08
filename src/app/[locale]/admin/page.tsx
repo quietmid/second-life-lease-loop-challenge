@@ -56,7 +56,7 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
       db.asset.findMany({
         where: { OR: [{ previous_lives: { gt: 0 } }, { leases: { some: {} } }] },
         include: {
-          leases: { include: { receipt: true }, orderBy: { signed_date: 'asc' } },
+          leases: { include: { receipt: true, early_exit: true }, orderBy: { signed_date: 'asc' } },
           inspections: {
             include: { refurbishment: true },
             orderBy: [{ inspected_on: 'desc' }, { created_at: 'desc' }],
@@ -74,6 +74,7 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
         include: {
           leases: {
             where: { return_requested_on: { not: null }, bought_out_on: null },
+            include: { early_exit: true },
             orderBy: [{ return_requested_on: 'desc' }, { signed_date: 'desc' }],
           },
           inspections: {
@@ -199,12 +200,19 @@ export default async function AdminPage({ params, searchParams }: PageProps<'/[l
                       {asset.make} {asset.model} · {asset.id}
                     </h3>
                     {returnLease ? (
-                      <p className="mt-1 text-sm text-[#526c61]">
-                        {t('admin.customer')}:{' '}
-                        {customerNames.get(returnLease.customer_id) ?? returnLease.customer_id}
-                        {' · '}
-                        {t('admin.requestedOn')}: {returnLease.return_requested_on}
-                      </p>
+                      <>
+                        <p className="mt-2 inline-flex rounded-full bg-[#e6f0e2] px-3 py-1 text-xs font-semibold text-[#245743]">
+                          {returnLease.early_exit
+                            ? t('admin.returnType.early')
+                            : t('admin.returnType.completed')}
+                        </p>
+                        <p className="mt-1 text-sm text-[#526c61]">
+                          {t('admin.customer')}:{' '}
+                          {customerNames.get(returnLease.customer_id) ?? returnLease.customer_id}
+                          {' · '}
+                          {t('admin.requestedOn')}: {returnLease.return_requested_on}
+                        </p>
+                      </>
                     ) : (
                       <p className="mt-1 text-sm text-[#526c61]">{t('admin.legacyReturn')}</p>
                     )}

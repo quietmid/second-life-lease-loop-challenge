@@ -161,7 +161,9 @@ export default async function AccountPage({
                         ? `${t('leaseEnd.earlyExitComplete')} · ${lease.return_requested_on}`
                         : lease.bought_out_on
                           ? t('leaseEnd.boughtOutOn', { date: lease.bought_out_on })
-                          : `${t('journey.returnPending')} ${lease.return_requested_on}`}
+                          : t('leaseEnd.completedLeasePending', {
+                              date: lease.return_requested_on ?? lease.end_date,
+                            })}
                     </p>
                   ) : date > lease.signed_date && date < lease.end_date ? (
                     <LeaseEndActions
@@ -188,7 +190,7 @@ export default async function AccountPage({
                         usageUnit={usageUnit}
                         locale={locale}
                         messages={messages[locale]}
-                        label={t('journey.return')}
+                        label={t('leaseEnd.completeLease')}
                         errorMessage={t('journey.error')}
                       />
                       <LeaseEndActions

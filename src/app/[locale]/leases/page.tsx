@@ -2,11 +2,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ReturnButton } from '@/components/return-button';
 import { LeaseEndActions } from '@/components/lease-end-actions';
-import { InvoicePayment } from '@/components/invoice-payment';
 import { loadCustomers } from '@/data/load';
 import { assetConditionSchema, isoDateSchema, usageUnitSchema } from '@/data/schemas';
 import { formatEuro } from '@/domain/money';
-import type { PaymentMethod } from '@/domain/invoice-status';
 import { getT, messages } from '@/i18n/get-t';
 import { intlLocale, isLocale } from '@/i18n/locales';
 import { db } from '@/server/db';
@@ -73,9 +71,6 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
             )}
           </p>
           <p className="mt-4 text-sm text-[#526c61]">{t('journey.invoiceNote')}</p>
-          <p className="mt-2 rounded-lg bg-[#f0f3e8] p-3 text-sm text-[#526c61]">
-            {t('payment.mockNotice')}
-          </p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
@@ -85,7 +80,6 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
                   <th>{t('journey.net')}</th>
                   <th>{t('journey.vat')}</th>
                   <th>{t('journey.total')}</th>
-                  <th>{t('payment.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,19 +92,6 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
                       {invoice.vat_rate_percent}% · {format(invoice.vat_cents)}
                     </td>
                     <td>{format(invoice.total_cents)}</td>
-                    <td className="p-2">
-                      <InvoicePayment
-                        invoiceId={invoice.id}
-                        customerId={customerId}
-                        issueDate={invoice.issue_date}
-                        dueDate={invoice.due_date}
-                        paymentStatus={invoice.payment_status as 'unpaid' | 'paid'}
-                        paymentMethod={invoice.payment_method as PaymentMethod | null}
-                        paidOn={invoice.paid_on}
-                        date={date}
-                        messages={messages[locale]}
-                      />
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -125,8 +106,10 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
                   {t('leaseEnd.earlyExitComplete')} · {format(lease.early_exit.settlement_cents)}
                 </p>
               ) : (
-                <p>
-                  {t('journey.returnPending')} {lease.return_requested_on}
+                <p role="status">
+                  {t('leaseEnd.completedLeasePending', {
+                    date: lease.return_requested_on ?? lease.end_date,
+                  })}
                 </p>
               )
             ) : date >= lease.end_date ? (
@@ -140,7 +123,7 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
                   )}
                   usageValue={lease.receipt?.usage_value ?? lease.asset.usage_value}
                   usageUnit={usageUnitSchema.parse(lease.asset.usage_unit)}
-                  label={t('journey.return')}
+                  label={t('leaseEnd.completeLease')}
                   errorMessage={t('journey.error')}
                   locale={locale}
                   messages={messages[locale]}
@@ -183,6 +166,12 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
               </p>
             )}
           </div>
+          <Link
+            className="mt-5 inline-flex text-sm font-semibold text-[#1f5948] underline underline-offset-4"
+            href={`/${locale}/transactions?${new URLSearchParams({ profile: customerId, date })}`}
+          >
+            {t('transactions.open')}
+          </Link>
         </section>
       ))}
     </div>
