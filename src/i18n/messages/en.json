@@ -322,5 +322,7 @@
   "transactions.noUpcoming": "There are no upcoming invoices.",
   "transactions.open": "Go to My transactions to pay invoices",
   "leaseEnd.completeLease": "Simulate lease completion and return",
-  "leaseEnd.completedLeasePending": "Lease completed on {date}; the item is awaiting admin inspection."
+  "leaseEnd.completedLeasePending": "Lease completed on {date}; the item is awaiting admin inspection.",
+  "leaseEnd.simulateEnd": "Simulate lease end",
+  "leaseEnd.simulateEndHint": "Skip ahead to the end of the term: the demo date moves to {date} and the return starts for this item."
 }

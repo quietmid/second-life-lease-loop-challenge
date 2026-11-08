@@ -322,5 +322,7 @@
   "transactions.noUpcoming": "Det finns inga kommande fakturor.",
   "transactions.open": "Gå till Mina transaktioner för att betala fakturor",
   "leaseEnd.completeLease": "Simulera att leasingavtalet avslutas och varan återlämnas",
-  "leaseEnd.completedLeasePending": "Leasingavtalet avslutades {date}; varan väntar på admininspektion."
+  "leaseEnd.completedLeasePending": "Leasingavtalet avslutades {date}; varan väntar på admininspektion.",
+  "leaseEnd.simulateEnd": "Simulera att avtalet löper ut",
+  "leaseEnd.simulateEndHint": "Hoppa till slutet av avtalstiden: demodatumet flyttas till {date} och returen startar för varan."
 }

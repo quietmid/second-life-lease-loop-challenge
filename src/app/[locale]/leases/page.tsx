@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { SimulateLeaseEndButton } from '@/components/simulate-lease-end-button';
 import { ReturnButton } from '@/components/return-button';
 import { LeaseEndActions } from '@/components/lease-end-actions';
 import { loadCustomers } from '@/data/load';
@@ -144,22 +145,39 @@ export default async function LeasesPage({ params, searchParams }: PageProps<'/[
                   messages={messages[locale]}
                 />
               </>
-            ) : date > lease.signed_date ? (
-              <LeaseEndActions
-                leaseId={lease.id}
-                customerId={customerId}
-                date={date}
-                signedDate={lease.signed_date}
-                endDate={lease.end_date}
-                condition={assetConditionSchema.parse(
-                  lease.receipt?.condition ?? lease.asset.condition
-                )}
-                usageValue={lease.receipt?.usage_value ?? lease.asset.usage_value}
-                usageUnit={usageUnitSchema.parse(lease.asset.usage_unit)}
-                buyoutCents={lease.buyout_cents}
-                locale={locale}
-                messages={messages[locale]}
-              />
+            ) : date >= lease.signed_date ? (
+              <>
+                <SimulateLeaseEndButton
+                  leaseId={lease.id}
+                  customerId={customerId}
+                  endDate={lease.end_date}
+                  condition={assetConditionSchema.parse(
+                    lease.receipt?.condition ?? lease.asset.condition
+                  )}
+                  usageValue={lease.receipt?.usage_value ?? lease.asset.usage_value}
+                  returnPath={`/${locale}/leases`}
+                  label={t('leaseEnd.simulateEnd')}
+                  hint={t('leaseEnd.simulateEndHint', { date: lease.end_date })}
+                  errorMessage={t('journey.error')}
+                />
+                {date > lease.signed_date ? (
+                  <LeaseEndActions
+                    leaseId={lease.id}
+                    customerId={customerId}
+                    date={date}
+                    signedDate={lease.signed_date}
+                    endDate={lease.end_date}
+                    condition={assetConditionSchema.parse(
+                      lease.receipt?.condition ?? lease.asset.condition
+                    )}
+                    usageValue={lease.receipt?.usage_value ?? lease.asset.usage_value}
+                    usageUnit={usageUnitSchema.parse(lease.asset.usage_unit)}
+                    buyoutCents={lease.buyout_cents}
+                    locale={locale}
+                    messages={messages[locale]}
+                  />
+                ) : null}
+              </>
             ) : (
               <p>
                 {t('journey.returnAfter')} {lease.end_date}

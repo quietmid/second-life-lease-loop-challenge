@@ -234,3 +234,19 @@ test('scenario 10 releases an unmatched historic item for a third-life quote', a
   await expect(page.locator('#return-ebike-008')).toContainText('Customer reported at return');
   await expect(page.locator('#return-ebike-008')).toContainText('10,000');
 });
+
+test('simulate lease end starts the return without changing the date by hand', async ({ page }) => {
+  await signLease(page, '/en/quote/ebike-002?profile=cust-aino&date=2026-11-05', '36');
+  await expect(page).toHaveURL(/\/en\/account\?/);
+  await page
+    .getByRole('listitem')
+    .filter({ hasText: 'Urban 2 Step-through' })
+    .getByRole('button', { name: 'Simulate lease end' })
+    .click();
+  await expect(page).toHaveURL(/date=2029-11-05/);
+  await expect(
+    page.getByRole('listitem').filter({ hasText: 'Urban 2 Step-through' }).getByRole('status')
+  ).toContainText('Lease completed on 2029-11-05');
+  await page.goto('/en/admin?profile=admin&date=2029-11-05&tab=returns');
+  await expect(page.locator('#return-ebike-002')).toContainText('Lease completed');
+});

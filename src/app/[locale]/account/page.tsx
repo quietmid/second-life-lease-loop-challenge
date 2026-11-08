@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AssetReceiptForm } from '@/components/asset-receipt-form';
 import { LeaseEndActions } from '@/components/lease-end-actions';
+import { SimulateLeaseEndButton } from '@/components/simulate-lease-end-button';
 import { ReturnButton } from '@/components/return-button';
 import { loadCustomers } from '@/data/load';
 import { assetConditionSchema, isoDateSchema, usageUnitSchema } from '@/data/schemas';
@@ -165,20 +166,35 @@ export default async function AccountPage({
                               date: lease.return_requested_on ?? lease.end_date,
                             })}
                     </p>
-                  ) : date > lease.signed_date && date < lease.end_date ? (
-                    <LeaseEndActions
-                      leaseId={lease.id}
-                      customerId={customerId}
-                      date={date}
-                      signedDate={lease.signed_date}
-                      endDate={lease.end_date}
-                      condition={condition}
-                      usageValue={usageValue}
-                      usageUnit={usageUnit}
-                      buyoutCents={lease.buyout_cents}
-                      locale={locale}
-                      messages={messages[locale]}
-                    />
+                  ) : date >= lease.signed_date && date < lease.end_date ? (
+                    <>
+                      <SimulateLeaseEndButton
+                        leaseId={lease.id}
+                        customerId={customerId}
+                        endDate={lease.end_date}
+                        condition={condition}
+                        usageValue={usageValue}
+                        returnPath={`/${locale}/account`}
+                        label={t('leaseEnd.simulateEnd')}
+                        hint={t('leaseEnd.simulateEndHint', { date: lease.end_date })}
+                        errorMessage={t('journey.error')}
+                      />
+                      {date > lease.signed_date ? (
+                        <LeaseEndActions
+                          leaseId={lease.id}
+                          customerId={customerId}
+                          date={date}
+                          signedDate={lease.signed_date}
+                          endDate={lease.end_date}
+                          condition={condition}
+                          usageValue={usageValue}
+                          usageUnit={usageUnit}
+                          buyoutCents={lease.buyout_cents}
+                          locale={locale}
+                          messages={messages[locale]}
+                        />
+                      ) : null}
+                    </>
                   ) : date >= lease.end_date ? (
                     <div className="mt-4">
                       <ReturnButton

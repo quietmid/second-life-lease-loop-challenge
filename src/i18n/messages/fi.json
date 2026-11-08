@@ -322,5 +322,7 @@
   "transactions.noUpcoming": "Tulevia laskuja ei ole.",
   "transactions.open": "Siirry Omat maksutapahtumat -sivulle maksamaan laskuja",
   "leaseEnd.completeLease": "Simuloi sopimuksen päättäminen ja palautus",
-  "leaseEnd.completedLeasePending": "Sopimus päättyi {date}; laite odottaa ylläpidon tarkastusta."
+  "leaseEnd.completedLeasePending": "Sopimus päättyi {date}; laite odottaa ylläpidon tarkastusta.",
+  "leaseEnd.simulateEnd": "Simuloi sopimuksen päättyminen",
+  "leaseEnd.simulateEndHint": "Siirry sopimuskauden loppuun: demopäivä siirtyy päivään {date} ja tuotteen palautus käynnistyy."
 }

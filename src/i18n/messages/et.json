@@ -322,5 +322,7 @@
   "transactions.noUpcoming": "Tulevasi arveid pole.",
   "transactions.open": "Arvete tasumiseks ava Minu tehingud",
   "leaseEnd.completeLease": "Simuleeri liisingu lõppemist ja eseme tagastamist",
-  "leaseEnd.completedLeasePending": "Liising lõppes {date}; ese ootab administraatori ülevaatust."
+  "leaseEnd.completedLeasePending": "Liising lõppes {date}; ese ootab administraatori ülevaatust.",
+  "leaseEnd.simulateEnd": "Simuleeri liisingu lõppu",
+  "leaseEnd.simulateEndHint": "Hüppa tähtaja lõppu: demokuupäev liigub kuupäevale {date} ja eseme tagastus algab."
 }
