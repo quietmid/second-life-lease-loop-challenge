@@ -25,7 +25,7 @@
     "db:setup": "node scripts/ensure-env.mjs && prisma generate && prisma migrate deploy && prisma db seed",
     "db:seed": "prisma db seed",
     "db:reset": "node scripts/ensure-env.mjs && prisma migrate reset --force && prisma db seed",
-    "db:migrate": "prisma migrate dev",
+    "db:migrate": "node scripts/db-migrate.mjs",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
     "prepare": "node .husky/install.mjs"
