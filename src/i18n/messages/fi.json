@@ -97,6 +97,7 @@
   "journey.incomplete": "Täytä soveltuvat kysymykset.",
   "journey.review": "Demohakemus vaatii manuaalisen tarkistuksen; allekirjoitus ei ole käytettävissä.",
   "journey.declined": "Demohakemusta ei voida hyväksyä.",
+  "journey.approved": "Hakemuksesi hyväksytään demon sääntöjen perusteella.",
   "journey.reason.age": "Hakijan tulee olla vähintään 18-vuotias.",
   "journey.reason.residency": "Valittua maata ei tueta.",
   "journey.reason.affordability": "Vuokra ylittää demon maksukyvyn rajan.",
