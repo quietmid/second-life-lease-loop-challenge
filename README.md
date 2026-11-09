@@ -8,6 +8,12 @@ Starter repo for the **Lease Loop** challenge, 5–6 November 2026 at Hive Helsi
 
 **Northfina** is a Helsinki-based leasing platform. It started as Etufillari, a bike-leasing service, and now leases any kind of asset. Dealers, banks and customers use it to get from a price quote to a signed contract, then through monthly invoices to the end of the lease. This repo is a small, independent playground, not our product code.
 
+## Project showcase
+
+I built Lease Loop with my team during the hackathon and have continued developing this repository afterward because I saw potential in the project: it tackles a real-world challenge of keeping a lease application secure while supporting the full lease lifecycle, from pricing and signing through invoicing, returns, inspection and refurbishment. Since the hackathon, I’ve expanded the app and its safeguards, including a full ten-scenario Playwright walkthrough, and plan to keep improving the experience and test coverage.
+
+**Group project:** [Lease Loop on GitHub](https://github.com/quietmid/northfina-lease-loop2026)
+
 ---
 
 ## Quick start
