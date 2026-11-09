@@ -154,7 +154,10 @@ export function AppShell({ children, locale, customers, defaultDate, messages }:
       <header className="sticky top-0 z-30 border-b border-[#dce4dc] bg-[#f7f7f2]/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-7">
           <Link href={contextualHref(`/${locale}`)} className="flex items-center gap-3 rounded-lg">
-            <SecondLifeMark className="size-10 rounded-xl bg-[#1f5948] p-1.5 text-[#e8f1dc]" />
+            <SecondLifeMark
+              animation="hover"
+              className="size-10 rounded-xl bg-[#1f5948] p-1.5 text-[#e8f1dc]"
+            />
             <span>
               <span className="block text-lg font-bold tracking-tight">Second Life</span>
               <span className="hidden text-xs text-[#587167] sm:block">

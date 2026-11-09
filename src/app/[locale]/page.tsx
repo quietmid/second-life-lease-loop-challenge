@@ -46,7 +46,10 @@ export default async function HomePage({ params, searchParams }: PageProps<'/[lo
         aria-labelledby="home-title"
         className="relative isolate overflow-hidden rounded-[2rem] bg-[#173f34] px-6 py-12 text-[#f5f4e9] sm:px-10 sm:py-16 xl:px-16"
       >
-        <SecondLifeMark className="pointer-events-none absolute -right-20 -top-20 -z-10 size-[26rem] text-[#c8d9b2]/10 sm:right-0 sm:top-1/2 sm:size-[34rem] sm:-translate-y-1/2" />
+        <SecondLifeMark
+          animation="entrance"
+          className="pointer-events-none absolute -right-20 -top-20 -z-10 size-[26rem] text-[#c8d9b2]/10 sm:right-0 sm:top-1/2 sm:size-[34rem] sm:-translate-y-1/2"
+        />
         <div className="relative max-w-3xl">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#c3d6a7]">
             {t('home.eyebrow')}
