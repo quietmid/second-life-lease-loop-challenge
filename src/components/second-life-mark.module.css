@@ -1,0 +1,45 @@
+@media (prefers-reduced-motion: no-preference) {
+  .entrance .circle,
+  a:hover > .hover .circle,
+  a:focus-visible > .hover .circle {
+    transform-origin: 80px 80px;
+    animation: circle-turn 2.4s ease-in-out both;
+  }
+
+  .entrance .arrow,
+  a:hover > .hover .arrow,
+  a:focus-visible > .hover .arrow {
+    animation: arrow-rise 2.4s ease-in-out both;
+  }
+}
+
+@keyframes circle-turn {
+  0%,
+  25% {
+    transform: rotate(0deg);
+  }
+  70%,
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+@keyframes arrow-rise {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  22% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  23%,
+  70% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
